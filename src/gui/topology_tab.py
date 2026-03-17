@@ -1,7 +1,6 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
-                             QPushButton, QLabel, QFileDialog, 
-                             QGroupBox, QFormLayout, QComboBox, 
-                             QLineEdit, QCheckBox, QMessageBox)
+                             QPushButton, QLabel, QGroupBox, QFileDialog, 
+                             QLineEdit, QCheckBox, QMessageBox, QComboBox)
 import os
 
 class TopologyTab(QWidget):
@@ -9,15 +8,26 @@ class TopologyTab(QWidget):
         super().__init__()
         self.main_window = main_window # Reference to main window for logging and running
         self.runner = main_window.runner
-        self.cwd = None # Current working directory (usually the directory of the selected PDB)
-
+        self.cwd = os.getcwd() # 默认当前目录
+        
         self.init_ui()
 
     def init_ui(self):
         layout = QVBoxLayout(self)
 
-        # 0. 工作目录和测试区
-        test_group = QGroupBox("基础测试与环境")
+        # 0. 工作目录设置
+        dir_group = QGroupBox("0. 设置工作目录")
+        dir_layout = QHBoxLayout()
+        self.dir_input = QLineEdit(self.cwd)
+        btn_browse_dir = QPushButton("浏览...")
+        btn_browse_dir.clicked.connect(self.browse_dir)
+        dir_layout.addWidget(QLabel("工作目录:"))
+        dir_layout.addWidget(self.dir_input)
+        dir_layout.addWidget(btn_browse_dir)
+        dir_group.setLayout(dir_layout)
+        layout.addWidget(dir_group)
+
+        # 1. 基础测试与环境
         test_layout = QHBoxLayout()
         test_btn = QPushButton("测试 GROMACS 安装 (gmx -version)")
         test_btn.clicked.connect(self.main_window.test_gmx)
@@ -122,11 +132,19 @@ class TopologyTab(QWidget):
         layout.addStretch()
 
     def browse_pdb(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "选择 PDB 文件", "", "PDB Files (*.pdb);;All Files (*)")
+        file_path, _ = QFileDialog.getOpenFileName(self, "选择 PDB 文件", self.cwd, "PDB Files (*.pdb);;All Files (*)")
         if file_path:
             self.pdb_input.setText(file_path)
+            # 我们保留原有的隐式设置 CWD 逻辑作为一种便利，但用户现在有了显式控制的选项
             self.cwd = os.path.dirname(file_path)
-            self.main_window.log(f"已设置工作目录为: {self.cwd}")
+            self.dir_input.setText(self.cwd)
+            self.main_window.log(f"已自动更新工作目录为: {self.cwd}")
+
+    def browse_dir(self):
+        d = QFileDialog.getExistingDirectory(self, "选择工作目录", self.cwd)
+        if d:
+            self.cwd = d
+            self.dir_input.setText(d)
 
     def set_buttons_enabled(self, enabled):
         """启用或禁用所有按钮，防止重复提交任务"""

@@ -12,6 +12,7 @@ from gui.topology_tab import TopologyTab
 from gui.em_tab import EMTab
 from gui.eq_tab import EQTab
 from gui.md_tab import MDTab
+from gui.ligand.ligand_simulator import LigandSimulator
 from gui.analysis_tab import AnalysisTab
 
 class MainWindow(QMainWindow):
@@ -77,8 +78,11 @@ class MainWindow(QMainWindow):
         self.solution_tabs = QTabWidget()
         self.stacked_widget.addWidget(self.solution_tabs)
         
-        # --- 模块 2,3,4: 占位符 (WIP) ---
-        self.setup_wip_module("Protein-Ligand Complex Simulator 正在开发中...\n\n未来将支持自动处理配体拓扑 (如 ACPYPE 集成)")
+        # --- 模块 2: Ligand Simulator ---
+        self.ligand_simulator = LigandSimulator(self)
+        self.stacked_widget.addWidget(self.ligand_simulator)
+        
+        # --- 模块 3,4: 占位符 (WIP) ---
         self.setup_wip_module("Membrane Simulator 正在开发中...\n\n未来将支持磷脂双分子层插入与定向")
         self.setup_wip_module("Polymer Simulator 正在开发中...\n\n敬请期待！")
         
