@@ -263,13 +263,21 @@ class EQTab(QWidget):
         args = ["grompp", "-f", "nvt.mdp", "-c", "em.gro", "-r", "em.gro", "-p", "topol.top", "-o", "nvt.tpr", "-maxwarn", "1"]
         
         self.main_window.log(f"\n>>> 正在运行: gmx {' '.join(args)}")
-        success, output = self.runner.run_command(args, cwd=cwd)
-        self.main_window.log(output)
         
+        # 异步执行 NVT grompp
+        self.worker_nvt_grompp = self.runner.create_worker(args, cwd=cwd)
+        self.worker_nvt_grompp.output_signal.connect(self.main_window.log)
+        self.worker_nvt_grompp.finished_signal.connect(self.on_nvt_grompp_finished)
+        
+        self.set_buttons_enabled(False)
+        self.worker_nvt_grompp.start()
+
+    def on_nvt_grompp_finished(self, success, message):
+        self.set_buttons_enabled(True)
         if success:
             QMessageBox.information(self, "成功", "grompp 运行完成！生成了 nvt.tpr")
         else:
-            QMessageBox.critical(self, "错误", "grompp (NVT) 运行失败，请查看日志。")
+            QMessageBox.critical(self, "错误", f"grompp (NVT) 运行失败: {message}")
 
     def run_mdrun_nvt(self):
         cwd = self.get_cwd()
@@ -285,13 +293,21 @@ class EQTab(QWidget):
         elif gpu_opt == "仅使用 CPU": args.extend(["-nb", "cpu"])
 
         self.main_window.log(f"\n>>> 正在运行: gmx {' '.join(args)}")
-        success, output = self.runner.run_command(args, cwd=cwd)
-        self.main_window.log(output)
         
+        # 异步执行 NVT mdrun
+        self.worker_nvt_mdrun = self.runner.create_worker(args, cwd=cwd)
+        self.worker_nvt_mdrun.output_signal.connect(self.main_window.log)
+        self.worker_nvt_mdrun.finished_signal.connect(self.on_nvt_mdrun_finished)
+        
+        self.set_buttons_enabled(False)
+        self.worker_nvt_mdrun.start()
+
+    def on_nvt_mdrun_finished(self, success, message):
+        self.set_buttons_enabled(True)
         if success:
             QMessageBox.information(self, "成功", "NVT 平衡完成！生成了 nvt.gro 等文件。")
         else:
-            QMessageBox.critical(self, "错误", "mdrun (NVT) 运行失败，请查看日志。")
+            QMessageBox.critical(self, "错误", f"mdrun (NVT) 运行失败: {message}")
 
     def run_grompp_npt(self):
         cwd = self.get_cwd()
@@ -306,13 +322,21 @@ class EQTab(QWidget):
         args = ["grompp", "-f", "npt.mdp", "-c", "nvt.gro", "-r", "nvt.gro", "-t", "nvt.cpt", "-p", "topol.top", "-o", "npt.tpr", "-maxwarn", "1"]
         
         self.main_window.log(f"\n>>> 正在运行: gmx {' '.join(args)}")
-        success, output = self.runner.run_command(args, cwd=cwd)
-        self.main_window.log(output)
         
+        # 异步执行 NPT grompp
+        self.worker_npt_grompp = self.runner.create_worker(args, cwd=cwd)
+        self.worker_npt_grompp.output_signal.connect(self.main_window.log)
+        self.worker_npt_grompp.finished_signal.connect(self.on_npt_grompp_finished)
+        
+        self.set_buttons_enabled(False)
+        self.worker_npt_grompp.start()
+
+    def on_npt_grompp_finished(self, success, message):
+        self.set_buttons_enabled(True)
         if success:
             QMessageBox.information(self, "成功", "grompp 运行完成！生成了 npt.tpr")
         else:
-            QMessageBox.critical(self, "错误", "grompp (NPT) 运行失败，请查看日志。")
+            QMessageBox.critical(self, "错误", f"grompp (NPT) 运行失败: {message}")
 
     def run_mdrun_npt(self):
         cwd = self.get_cwd()
@@ -328,10 +352,23 @@ class EQTab(QWidget):
         elif gpu_opt == "仅使用 CPU": args.extend(["-nb", "cpu"])
 
         self.main_window.log(f"\n>>> 正在运行: gmx {' '.join(args)}")
-        success, output = self.runner.run_command(args, cwd=cwd)
-        self.main_window.log(output)
         
+        # 异步执行 NPT mdrun
+        self.worker_npt_mdrun = self.runner.create_worker(args, cwd=cwd)
+        self.worker_npt_mdrun.output_signal.connect(self.main_window.log)
+        self.worker_npt_mdrun.finished_signal.connect(self.on_npt_mdrun_finished)
+        
+        self.set_buttons_enabled(False)
+        self.worker_npt_mdrun.start()
+
+    def on_npt_mdrun_finished(self, success, message):
+        self.set_buttons_enabled(True)
         if success:
             QMessageBox.information(self, "成功", "NPT 平衡完成！生成了 npt.gro 等文件。")
         else:
-            QMessageBox.critical(self, "错误", "mdrun (NPT) 运行失败，请查看日志。")
+            QMessageBox.critical(self, "错误", f"mdrun (NPT) 运行失败: {message}")
+
+    def set_buttons_enabled(self, enabled):
+        # 禁用/启用所有按钮
+        for child in self.findChildren(QPushButton):
+            child.setEnabled(enabled)

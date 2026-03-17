@@ -131,13 +131,27 @@ class EMTab(QWidget):
         args = ["grompp", "-f", "minim.mdp", "-c", input_gro, "-p", "topol.top", "-o", "em.tpr", "-maxwarn", "1"]
         
         self.main_window.log(f"\n>>> 正在运行: gmx {' '.join(args)}")
-        success, output = self.runner.run_command(args, cwd=cwd)
-        self.main_window.log(output)
         
+        # 使用异步 Worker 执行
+        self.worker = self.runner.create_worker(args, cwd=cwd)
+        self.worker.output_signal.connect(self.main_window.log)
+        self.worker.finished_signal.connect(self.on_grompp_finished)
+        
+        # 禁用按钮防止重复点击
+        self.set_buttons_enabled(False)
+        self.worker.start()
+
+    def on_grompp_finished(self, success, message):
+        self.set_buttons_enabled(True)
         if success:
             QMessageBox.information(self, "成功", "grompp 运行完成！生成了 em.tpr")
         else:
-            QMessageBox.critical(self, "错误", "grompp 运行失败，请查看日志。")
+            QMessageBox.critical(self, "错误", f"grompp 运行失败: {message}")
+
+    def set_buttons_enabled(self, enabled):
+        # 简单粗暴地禁用/启用所有按钮
+        for child in self.findChildren(QPushButton):
+            child.setEnabled(enabled)
 
     def open_editor(self):
         current_content = self.mdp_content.toPlainText()
@@ -166,13 +180,18 @@ class EMTab(QWidget):
             args.extend(["-nb", "cpu"])
 
         self.main_window.log(f"\n>>> 正在运行: gmx {' '.join(args)}")
-        # 注意：mdrun 可能会运行较长时间，这里的 run_command 是同步阻塞的，
-        # 在实际生产中可能需要使用 QThread 异步运行以防止界面卡死，
-        # 但目前为了保持简单，先直接运行。
-        success, output = self.runner.run_command(args, cwd=cwd)
-        self.main_window.log(output)
         
+        # 使用异步 Worker 执行
+        self.worker = self.runner.create_worker(args, cwd=cwd)
+        self.worker.output_signal.connect(self.main_window.log)
+        self.worker.finished_signal.connect(self.on_mdrun_finished)
+        
+        self.set_buttons_enabled(False)
+        self.worker.start()
+
+    def on_mdrun_finished(self, success, message):
+        self.set_buttons_enabled(True)
         if success:
-            QMessageBox.information(self, "成功", "能量最小化 mdrun 完成！生成了 em.gro 等文件。")
+            QMessageBox.information(self, "成功", "EM 能量最小化完成！")
         else:
-            QMessageBox.critical(self, "错误", "mdrun 运行失败，请查看日志。")
+            QMessageBox.critical(self, "错误", f"mdrun (EM) 运行失败: {message}")

@@ -128,6 +128,11 @@ class TopologyTab(QWidget):
             self.cwd = os.path.dirname(file_path)
             self.main_window.log(f"已设置工作目录为: {self.cwd}")
 
+    def set_buttons_enabled(self, enabled):
+        """启用或禁用所有按钮，防止重复提交任务"""
+        for child in self.findChildren(QPushButton):
+            child.setEnabled(enabled)
+
     def run_pdb2gmx(self):
         pdb_file = self.pdb_input.text()
         if not pdb_file or not os.path.exists(pdb_file):
@@ -147,14 +152,20 @@ class TopologyTab(QWidget):
         if ignh:
             args.append("-ignh")
 
-        self.main_window.log(f"\n>>> 正在运行: gmx {' '.join(args)}")
-        success, output = self.runner.run_command(args, cwd=self.cwd)
-        self.main_window.log(output)
+        # 使用异步 Worker 执行
+        self.worker_pdb2gmx = self.runner.create_worker(args, cwd=self.cwd)
+        self.worker_pdb2gmx.output_signal.connect(self.main_window.log)
+        self.worker_pdb2gmx.finished_signal.connect(self.on_pdb2gmx_finished)
         
+        self.set_buttons_enabled(False)
+        self.worker_pdb2gmx.start()
+
+    def on_pdb2gmx_finished(self, success, message):
+        self.set_buttons_enabled(True)
         if success:
             QMessageBox.information(self, "成功", "pdb2gmx 运行完成！生成了 processed.gro 和 topol.top")
         else:
-            QMessageBox.critical(self, "错误", "pdb2gmx 运行失败，请查看日志。")
+            QMessageBox.critical(self, "错误", f"pdb2gmx 运行失败: {message}")
 
     def run_editconf(self):
         if not self.cwd:
@@ -171,14 +182,20 @@ class TopologyTab(QWidget):
 
         args = ["editconf", "-f", "processed.gro", "-o", "newbox.gro", "-c", "-d", d, "-bt", bt]
 
-        self.main_window.log(f"\n>>> 正在运行: gmx {' '.join(args)}")
-        success, output = self.runner.run_command(args, cwd=self.cwd)
-        self.main_window.log(output)
+        # 使用异步 Worker 执行
+        self.worker_editconf = self.runner.create_worker(args, cwd=self.cwd)
+        self.worker_editconf.output_signal.connect(self.main_window.log)
+        self.worker_editconf.finished_signal.connect(self.on_editconf_finished)
         
+        self.set_buttons_enabled(False)
+        self.worker_editconf.start()
+
+    def on_editconf_finished(self, success, message):
+        self.set_buttons_enabled(True)
         if success:
             QMessageBox.information(self, "成功", "editconf 运行完成！生成了 newbox.gro")
         else:
-            QMessageBox.critical(self, "错误", "editconf 运行失败，请查看日志。")
+            QMessageBox.critical(self, "错误", f"editconf 运行失败: {message}")
 
     def run_solvate(self):
         if not self.cwd:
@@ -195,14 +212,20 @@ class TopologyTab(QWidget):
         # 默认使用 spc216.gro 作为溶剂盒子
         args = ["solvate", "-cp", "newbox.gro", "-cs", "spc216.gro", "-o", "solvated.gro", "-p", "topol.top"]
 
-        self.main_window.log(f"\n>>> 正在运行: gmx {' '.join(args)}")
-        success, output = self.runner.run_command(args, cwd=self.cwd)
-        self.main_window.log(output)
+        # 使用异步 Worker 执行
+        self.worker_solvate = self.runner.create_worker(args, cwd=self.cwd)
+        self.worker_solvate.output_signal.connect(self.main_window.log)
+        self.worker_solvate.finished_signal.connect(self.on_solvate_finished)
         
+        self.set_buttons_enabled(False)
+        self.worker_solvate.start()
+
+    def on_solvate_finished(self, success, message):
+        self.set_buttons_enabled(True)
         if success:
             QMessageBox.information(self, "成功", "solvate 运行完成！生成了 solvated.gro")
         else:
-            QMessageBox.critical(self, "错误", "solvate 运行失败，请查看日志。")
+            QMessageBox.critical(self, "错误", f"solvate 运行失败: {message}")
 
     def run_genion(self):
         if not self.cwd:
@@ -212,32 +235,41 @@ class TopologyTab(QWidget):
         # 1. 首先需要生成一个离子的 mdp 文件 (最简单的即可)
         ions_mdp = os.path.join(self.cwd, "ions.mdp")
         if not os.path.exists(ions_mdp):
-            with open(ions_mdp, "w") as f:
-                f.write("; ions.mdp - used as input into grompp to generate ions.tpr\n")
-                f.write("integrator  = steep\n")
-                f.write("emtol       = 1000.0\n")
-                f.write("emstep      = 0.01\n")
-                f.write("nsteps      = 50000\n")
-                f.write("nstlist         = 1\n")
-                f.write("cutoff-scheme   = Verlet\n")
-                f.write("ns_type         = grid\n")
-                f.write("coulombtype     = cutoff\n")
-                f.write("rcoulomb        = 1.0\n")
-                f.write("rvdw            = 1.0\n")
-                f.write("pbc             = xyz\n")
+            try:
+                with open(ions_mdp, "w") as f:
+                    f.write("; ions.mdp - used as input into grompp to generate ions.tpr\n")
+                    f.write("integrator  = steep\n")
+                    f.write("emtol       = 1000.0\n")
+                    f.write("emstep      = 0.01\n")
+                    f.write("nsteps      = 50000\n")
+                    f.write("nstlist         = 1\n")
+                    f.write("cutoff-scheme   = Verlet\n")
+                    f.write("ns_type         = grid\n")
+                    f.write("coulombtype     = cutoff\n")
+                    f.write("rcoulomb        = 1.0\n")
+                    f.write("rvdw            = 1.0\n")
+                    f.write("pbc             = xyz\n")
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"创建 ions.mdp 失败: {str(e)}")
+                return
         
         # 2. 运行 grompp 生成 ions.tpr
         args_grompp = ["grompp", "-f", "ions.mdp", "-c", "solvated.gro", "-p", "topol.top", "-o", "ions.tpr"]
-        self.main_window.log(f"\n>>> [准备加离子] 正在运行: gmx {' '.join(args_grompp)}")
         # 忽略 maxwarn 防止刚才的报错打断离子生成
         args_grompp.append("-maxwarn")
         args_grompp.append("1")
         
-        success_grompp, output_grompp = self.runner.run_command(args_grompp, cwd=self.cwd)
-        self.main_window.log(output_grompp)
+        self.worker_genion_grompp = self.runner.create_worker(args_grompp, cwd=self.cwd)
+        self.worker_genion_grompp.output_signal.connect(self.main_window.log)
+        self.worker_genion_grompp.finished_signal.connect(self.on_genion_grompp_finished)
         
-        if not success_grompp:
-            QMessageBox.critical(self, "错误", "生成 ions.tpr 失败，无法进行 genion 步骤。请查看日志。")
+        self.set_buttons_enabled(False)
+        self.worker_genion_grompp.start()
+
+    def on_genion_grompp_finished(self, success, message):
+        if not success:
+            self.set_buttons_enabled(True)
+            QMessageBox.critical(self, "错误", f"生成 ions.tpr 失败: {message}")
             return
             
         # 3. 运行 genion
@@ -251,34 +283,17 @@ class TopologyTab(QWidget):
         if neutral:
             args_genion.append("-neutral")
             
-        self.main_window.log(f"\n>>> 正在运行: gmx {' '.join(args_genion)}")
+        # 使用 input_text="SOL" 自动选择溶剂组
+        self.worker_genion = self.runner.create_worker(args_genion, cwd=self.cwd, input_text="SOL")
+        self.worker_genion.output_signal.connect(self.main_window.log)
+        self.worker_genion.finished_signal.connect(self.on_genion_finished)
         
-        # 因为 genion 需要从标准输入选择要替换的组 (通常是 SOL 即水组，在绝大多数情况下组号是 13 或基于拓扑变化)
-        # 这里我们使用 subprocess 传递输入给它。为了简单，我们可以使用 echo 13 | gmx genion，
-        # 但稳妥起见，由于 GROMACS-GUI 封装，我们可以直接修改 runner 或者通过 python 写入
-        
-        cmd = [self.runner.gmx_path] + args_genion
-        try:
-            import subprocess
-            # 'SOL' 组通常可以被安全地替换。我们可以尝试发送 "SOL" 字符串。
-            result = subprocess.run(
-                cmd,
-                cwd=self.cwd,
-                input="SOL\n", # 选择 SOL 组进行替换
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                check=True
-            )
-            self.main_window.log(result.stdout)
+        self.worker_genion.start()
+
+    def on_genion_finished(self, success, message):
+        self.set_buttons_enabled(True)
+        if success:
             QMessageBox.information(self, "成功", "genion 运行完成！生成了 solvated_ions.gro，并已更新拓扑。")
-            
-            # 为了后续流程，我们需要提醒用户
             QMessageBox.information(self, "注意", "现在您已经添加了离子，后续的能量最小化请使用 [solvated_ions.gro] 作为输入！")
-            
-        except subprocess.CalledProcessError as e:
-            self.main_window.log(f"genion 失败: {e.output}")
-            QMessageBox.critical(self, "错误", "genion 运行失败，可能是找不到 'SOL' 组，请查看日志。")
-        except Exception as e:
-            self.main_window.log(f"执行出现异常: {str(e)}")
-            QMessageBox.critical(self, "错误", f"执行异常: {str(e)}")
+        else:
+            QMessageBox.critical(self, "错误", f"genion 运行失败: {message}\n可能是找不到 'SOL' 组。")

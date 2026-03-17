@@ -57,8 +57,13 @@ class MDPEditor(QDialog):
         self.add_section_header("输出控制 (Output Control)")
         self.nstxout = self.add_line_param("nstxout", "500", "坐标输出频率 (步)")
         self.nstvout = self.add_line_param("nstvout", "500", "速度输出频率 (步)")
+        self.nstfout = self.add_line_param("nstfout", "0", "力输出频率 (步)")
         self.nstenergy = self.add_line_param("nstenergy", "500", "能量输出频率 (步)")
         self.nstlog = self.add_line_param("nstlog", "500", "日志输出频率 (步)")
+        
+        if self.mdp_type == "md":
+            self.nstxout_compressed = self.add_line_param("nstxout-compressed", "5000", "压缩坐标输出频率 (步)")
+            self.compressed_x_grps = self.add_line_param("compressed-x-grps", "System", "压缩坐标组")
         
         # === 3. 邻居搜索与相互作用 ===
         self.add_section_header("邻居搜索与相互作用 (Neighbor Searching)")
@@ -147,7 +152,8 @@ class MDPEditor(QDialog):
         # 遍历所有已知的 key 生成内容
         keys = [
             "integrator", "nsteps", "dt", "emtol", "emstep",
-            "nstxout", "nstvout", "nstenergy", "nstlog",
+            "nstxout", "nstvout", "nstfout", "nstenergy", "nstlog",
+            "nstxout-compressed", "compressed-x-grps",
             "cutoff-scheme", "ns_type", "nstlist", "coulombtype", "rcoulomb", "rvdw",
             "tcoupl", "tc-grps", "tau_t", "ref_t",
             "pcoupl", "pcoupltype", "tau_p", "ref_p", "compressibility",

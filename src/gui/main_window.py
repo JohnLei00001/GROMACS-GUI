@@ -9,12 +9,14 @@ from core.runner import GromacsRunner
 from gui.topology_tab import TopologyTab
 from gui.em_tab import EMTab
 from gui.eq_tab import EQTab
+from gui.md_tab import MDTab
+from gui.analysis_tab import AnalysisTab
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("GROMACS GUI")
-        self.resize(900, 700)
+        self.resize(1000, 750)
         
         self.runner = GromacsRunner()
         
@@ -31,6 +33,8 @@ class MainWindow(QMainWindow):
         self.init_topology_tab()
         self.init_em_tab()
         self.init_eq_tab()
+        self.init_md_tab()
+        self.init_analysis_tab()
         
         # 底部日志输出窗口
         self.log_output = QTextEdit()
@@ -56,6 +60,14 @@ class MainWindow(QMainWindow):
     def init_eq_tab(self):
         tab = EQTab(self)
         self.tabs.addTab(tab, "3. 系统平衡")
+        
+    def init_md_tab(self):
+        tab = MDTab(self)
+        self.tabs.addTab(tab, "4. 生产模拟")
+        
+    def init_analysis_tab(self):
+        tab = AnalysisTab(self)
+        self.tabs.addTab(tab, "5. 分析与可视化")
         
     def log(self, message):
         """向日志窗口输出信息"""
