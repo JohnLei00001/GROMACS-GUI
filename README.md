@@ -6,7 +6,7 @@
 
 ## ✨ 功能特性
 
-目前支持以下主要流程：
+目前主要模块为 **Solution Simulator** (溶液体系模拟)，支持以下完整流程：
 
 1.  **拓扑与水箱 (Topology & Water Box)**
     *   生成拓扑文件
@@ -26,6 +26,12 @@
     *   **轨迹处理**: 运行 trjconv 去除周期性边界条件 (PBC)
     *   **数据分析与绘图**: 支持一键计算 RMSD, RMSF, Gyrate，并使用 Matplotlib 进行数据可视化
     *   **外部工具集成**: 预留 VMD 等可视化工具的启动接口
+
+> **🚧 正在开发中的模块**:
+> *   **Ligand Simulator**: 蛋白-配体复合物模拟 (WIP)
+> *   **Membrane Simulator**: 膜蛋白体系模拟 (WIP)
+> *   **Polymer Simulator**: 聚合物体系模拟 (WIP)
+
 
 ## 🛠️ 技术栈
 

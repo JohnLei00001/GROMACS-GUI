@@ -89,7 +89,7 @@ class EMTab(QWidget):
         # 尝试从 TopologyTab 获取工作目录
         try:
             # 假设 TopologyTab 是第一个标签页
-            topo_tab = self.main_window.tabs.widget(0)
+            topo_tab = self.main_window.solution_tabs.widget(0)
             return topo_tab.cwd
         except:
             return None

@@ -228,7 +228,7 @@ class EQTab(QWidget):
 
     def get_cwd(self):
         try:
-            topo_tab = self.main_window.tabs.widget(0)
+            topo_tab = self.main_window.solution_tabs.widget(0)
             return topo_tab.cwd
         except:
             return None
