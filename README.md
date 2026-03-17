@@ -12,10 +12,13 @@
     *   生成拓扑文件
     *   定义溶剂盒子
 2.  **能量最小化 (Energy Minimization)**
-    *   配置 EM 参数
-    *   运行能量最小化
+    *   **可视化 MDP 参数编辑器**: 支持图形化配置 integrator, nsteps, emtol 等关键参数
+    *   运行能量最小化 (grompp & mdrun)
+    *   实时日志输出
 3.  **系统平衡 (System Equilibration)**
-    *   NVT/NPT 平衡模拟配置与运行
+    *   **NVT 平衡**: 恒温模拟配置，支持温度耦合参数调整
+    *   **NPT 平衡**: 恒压模拟配置，支持压力耦合参数调整
+    *   集成 MDP 编辑器，轻松修改模拟参数
 
 ## 🛠️ 技术栈
 

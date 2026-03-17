@@ -1,8 +1,9 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QGroupBox, 
                              QFormLayout, QComboBox, QLineEdit, 
-                             QTextEdit, QMessageBox, QTabWidget)
+                             QTextEdit, QMessageBox, QTabWidget, QDialog)
 import os
+from .mdp_editor import MDPEditor
 
 class EQTab(QWidget):
     def __init__(self, main_window):
@@ -83,11 +84,18 @@ class EQTab(QWidget):
         self.nvt_mdp_content.setText(default_nvt_mdp)
         self.nvt_mdp_content.setStyleSheet("font-family: Consolas; font-size: 9pt;")
         
+        btn_layout = QHBoxLayout()
+        btn_edit_nvt = QPushButton("打开参数编辑器")
+        btn_edit_nvt.clicked.connect(lambda: self.open_editor("nvt"))
+        
         btn_save_nvt_mdp = QPushButton("保存为 nvt.mdp")
         btn_save_nvt_mdp.clicked.connect(lambda: self.save_mdp("nvt.mdp", self.nvt_mdp_content.toPlainText()))
         
+        btn_layout.addWidget(btn_edit_nvt)
+        btn_layout.addWidget(btn_save_nvt_mdp)
+        
         mdp_layout.addWidget(self.nvt_mdp_content)
-        mdp_layout.addWidget(btn_save_nvt_mdp)
+        mdp_layout.addLayout(btn_layout)
         mdp_group.setLayout(mdp_layout)
         layout.addWidget(mdp_group)
 
@@ -168,11 +176,18 @@ class EQTab(QWidget):
         self.npt_mdp_content.setText(default_npt_mdp)
         self.npt_mdp_content.setStyleSheet("font-family: Consolas; font-size: 9pt;")
         
+        btn_layout = QHBoxLayout()
+        btn_edit_npt = QPushButton("打开参数编辑器")
+        btn_edit_npt.clicked.connect(lambda: self.open_editor("npt"))
+        
         btn_save_npt_mdp = QPushButton("保存为 npt.mdp")
         btn_save_npt_mdp.clicked.connect(lambda: self.save_mdp("npt.mdp", self.npt_mdp_content.toPlainText()))
         
+        btn_layout.addWidget(btn_edit_npt)
+        btn_layout.addWidget(btn_save_npt_mdp)
+        
         mdp_layout.addWidget(self.npt_mdp_content)
-        mdp_layout.addWidget(btn_save_npt_mdp)
+        mdp_layout.addLayout(btn_layout)
         mdp_group.setLayout(mdp_layout)
         layout.addWidget(mdp_group)
 
@@ -195,6 +210,21 @@ class EQTab(QWidget):
         
         run_group.setLayout(run_layout)
         layout.addWidget(run_group)
+    
+    def open_editor(self, mdp_type):
+        current_content = ""
+        if mdp_type == "nvt":
+            current_content = self.nvt_mdp_content.toPlainText()
+        else:
+            current_content = self.npt_mdp_content.toPlainText()
+            
+        dialog = MDPEditor(self, mdp_type, current_content)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            new_content = dialog.get_mdp_content()
+            if mdp_type == "nvt":
+                self.nvt_mdp_content.setText(new_content)
+            else:
+                self.npt_mdp_content.setText(new_content)
 
     def get_cwd(self):
         try:

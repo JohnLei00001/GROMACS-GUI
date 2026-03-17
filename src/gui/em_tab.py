@@ -1,8 +1,9 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QFileDialog, 
                              QGroupBox, QFormLayout, QComboBox, 
-                             QLineEdit, QTextEdit, QMessageBox)
+                             QLineEdit, QTextEdit, QMessageBox, QDialog)
 import os
+from .mdp_editor import MDPEditor
 
 class EMTab(QWidget):
     def __init__(self, main_window):
@@ -38,14 +39,21 @@ class EMTab(QWidget):
             "pbc             = xyz       ; Periodic Boundary Conditions in all directions\n"
         )
         self.mdp_content.setText(default_mdp)
-        self.mdp_content.setStyleSheet("font-family: Consolas; font-size: 10pt;")
+        self.mdp_content.setStyleSheet("font-family: Consolas; font-size: 9pt;")
+        
+        btn_layout = QHBoxLayout()
+        btn_edit_mdp = QPushButton("打开参数编辑器")
+        btn_edit_mdp.clicked.connect(self.open_editor)
         
         btn_save_mdp = QPushButton("保存为 minim.mdp")
         btn_save_mdp.clicked.connect(self.save_mdp)
         
+        btn_layout.addWidget(btn_edit_mdp)
+        btn_layout.addWidget(btn_save_mdp)
+        
         mdp_layout.addWidget(QLabel("MDP 参数内容:"))
         mdp_layout.addWidget(self.mdp_content)
-        mdp_layout.addWidget(btn_save_mdp)
+        mdp_layout.addLayout(btn_layout)
         mdp_group.setLayout(mdp_layout)
         layout.addWidget(mdp_group)
 
@@ -130,6 +138,13 @@ class EMTab(QWidget):
             QMessageBox.information(self, "成功", "grompp 运行完成！生成了 em.tpr")
         else:
             QMessageBox.critical(self, "错误", "grompp 运行失败，请查看日志。")
+
+    def open_editor(self):
+        current_content = self.mdp_content.toPlainText()
+        dialog = MDPEditor(self, "em", current_content)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            new_content = dialog.get_mdp_content()
+            self.mdp_content.setPlainText(new_content)
 
     def run_mdrun(self):
         cwd = self.get_cwd()
