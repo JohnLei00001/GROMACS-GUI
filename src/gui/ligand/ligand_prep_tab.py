@@ -133,39 +133,54 @@ class LigandPrepTab(QWidget):
     def browse_file(self, line_edit, filter_str):
         f, _ = QFileDialog.getOpenFileName(self, "选择文件", self.cwd, filter_str)
         if f:
-            line_edit.setText(f)
+            file_name = os.path.basename(f)
+            target_path = os.path.join(self.cwd, file_name)
+            
+            # 如果源文件不在当前工作目录，则复制
+            if os.path.abspath(f) != os.path.abspath(target_path):
+                try:
+                    shutil.copy(f, target_path)
+                    self.main_window.log(f"已将文件复制到工作目录: {target_path}")
+                except Exception as e:
+                    QMessageBox.critical(self, "错误", f"复制文件失败: {str(e)}")
+                    return
+            
+            line_edit.setText(file_name)
 
     def confirm_import(self):
-        itp = self.itp_input.text()
-        gro = self.gro_input.text()
+        itp_filename = self.itp_input.text()
+        gro_filename = self.gro_input.text()
         
-        if not itp or not gro:
+        if not itp_filename or not gro_filename:
             QMessageBox.warning(self, "警告", "请同时提供 .itp 和 .gro/.pdb 文件")
             return
             
-        if not os.path.exists(itp) or not os.path.exists(gro):
-            QMessageBox.warning(self, "警告", "文件不存在，请检查路径")
+        full_itp_path = os.path.join(self.cwd, itp_filename)
+        full_gro_path = os.path.join(self.cwd, gro_filename)
+            
+        if not os.path.exists(full_itp_path) or not os.path.exists(full_gro_path):
+            QMessageBox.warning(self, "警告", "文件不存在于工作目录中，请重新选择")
             return
             
-        # 复制文件到工作目录
+        # 复制文件到工作目录的目标命名 (ligand.itp / ligand.gro)
         try:
             target_itp = os.path.join(self.cwd, "ligand.itp")
             target_gro = os.path.join(self.cwd, "ligand.gro")
             
-            # 如果是 pdb，尝试转换为 gro (这里简单复制，后面步骤处理)
-            # 为了统一，我们尽量引导用户提供 gro，或者我们在这里调用 editconf 转一下
+            # 如果源文件和目标文件不同，则复制
+            if os.path.abspath(full_itp_path) != os.path.abspath(target_itp):
+                shutil.copy(full_itp_path, target_itp)
             
-            shutil.copy(itp, target_itp)
-            
-            if gro.endswith('.pdb'):
+            if gro_filename.endswith('.pdb'):
                 # 转换 pdb -> gro
-                args = ["editconf", "-f", gro, "-o", "ligand.gro"]
+                args = ["editconf", "-f", gro_filename, "-o", "ligand.gro"]
                 self.worker_convert = self.runner.create_worker(args, cwd=self.cwd)
                 self.worker_convert.output_signal.connect(self.main_window.log)
                 self.worker_convert.finished_signal.connect(lambda s, m: self.on_convert_finished(s, m, target_itp, target_gro))
                 self.worker_convert.start()
             else:
-                shutil.copy(gro, target_gro)
+                if os.path.abspath(full_gro_path) != os.path.abspath(target_gro):
+                    shutil.copy(full_gro_path, target_gro)
                 self.finish_setup(target_itp, target_gro)
                 
         except Exception as e:
@@ -178,22 +193,37 @@ class LigandPrepTab(QWidget):
             QMessageBox.critical(self, "错误", f"PDB 转 GRO 失败: {message}")
 
     def run_acpype(self):
-        mol = self.mol_input.text()
-        if not mol or not os.path.exists(mol):
-            QMessageBox.warning(self, "警告", "请选择有效的小分子文件")
+        mol_filename = self.mol_input.text()
+        full_mol_path = os.path.join(self.cwd, mol_filename)
+        
+        if not mol_filename or not os.path.exists(full_mol_path):
+            QMessageBox.warning(self, "警告", f"在工作目录中未找到有效的小分子文件: {mol_filename}")
             return
             
-        # 检查 acpype 是否可用
-        # 这里假设用户环境里有 acpype 命令
-        # 我们可以尝试运行 acpype -h 来检查
-        
+        # 依赖检查：ACPYPE 需要 antechamber (AmberTools)
+        # Windows 上通常难以直接通过 pip 安装 AmberTools，需要 Conda 或 WSL
+        # 我们先检查 antechamber 是否在 PATH 中
+        if not shutil.which("antechamber"):
+            msg = (
+                "❌ **未检测到 AmberTools (antechamber)**\n\n"
+                "ACPYPE 依赖 AmberTools 中的 `antechamber` 程序来生成 GAFF 力场参数。\n"
+                "仅安装 Open Babel 是不够的。\n\n"
+                "解决方案：\n"
+                "1. [推荐] 使用在线服务器生成拓扑 (如 ACPYPE Server 或 LigParGen)，然后使用本软件的【导入】功能。\n"
+                "2. 使用 Conda 安装 AmberTools: `conda install -c conda-forge ambertools`\n"
+                "3. 如果您已安装，请确保 `antechamber` 在系统 PATH 环境变量中。"
+            )
+            QMessageBox.critical(self, "依赖缺失", msg)
+            return
+
         charge = self.charge_input.text()
         mult = self.multiplicity_input.text()
         atom_type = self.atom_type_combo.currentText()
         
-        # 构造命令
-        # acpype -i input.mol2 -c user -n charge -m mult -a atom_type
-        args = ["acpype", "-i", mol, "-c", "user", "-n", charge, "-m", mult, "-a", atom_type]
+        # 构造命令 (在 cwd 中运行，只需提供文件名)
+        # 尝试使用 python -m acpype 以规避脚本路径问题
+        import sys
+        args = [sys.executable, "-m", "acpype", "-i", mol_filename, "-c", "user", "-n", charge, "-m", mult, "-a", atom_type]
         
         self.main_window.log(f"\n>>> 正在运行: {' '.join(args)}")
         

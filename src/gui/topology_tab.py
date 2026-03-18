@@ -1,7 +1,9 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QGroupBox, QFileDialog, 
-                             QLineEdit, QCheckBox, QMessageBox, QComboBox)
+                             QLineEdit, QCheckBox, QMessageBox, QComboBox,
+                             QFormLayout)
 import os
+import shutil
 
 class TopologyTab(QWidget):
     def __init__(self, main_window):
@@ -28,6 +30,7 @@ class TopologyTab(QWidget):
         layout.addWidget(dir_group)
 
         # 1. 基础测试与环境
+        test_group = QGroupBox("1. 基础测试与环境")
         test_layout = QHBoxLayout()
         test_btn = QPushButton("测试 GROMACS 安装 (gmx -version)")
         test_btn.clicked.connect(self.main_window.test_gmx)
@@ -134,11 +137,23 @@ class TopologyTab(QWidget):
     def browse_pdb(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "选择 PDB 文件", self.cwd, "PDB Files (*.pdb);;All Files (*)")
         if file_path:
-            self.pdb_input.setText(file_path)
-            # 我们保留原有的隐式设置 CWD 逻辑作为一种便利，但用户现在有了显式控制的选项
-            self.cwd = os.path.dirname(file_path)
-            self.dir_input.setText(self.cwd)
-            self.main_window.log(f"已自动更新工作目录为: {self.cwd}")
+            # 获取文件名
+            file_name = os.path.basename(file_path)
+            # 目标路径
+            target_path = os.path.join(self.cwd, file_name)
+            
+            # 如果源文件不在当前工作目录，则复制
+            if os.path.abspath(file_path) != os.path.abspath(target_path):
+                try:
+                    shutil.copy(file_path, target_path)
+                    self.main_window.log(f"已将输入文件复制到工作目录: {target_path}")
+                except Exception as e:
+                    QMessageBox.critical(self, "错误", f"复制文件失败: {str(e)}")
+                    return
+
+            self.pdb_input.setText(file_name)
+            # self.cwd 保持不变，由用户在第一步显式设置
+            self.main_window.log(f"已选择输入文件: {file_name} (位于工作目录)")
 
     def browse_dir(self):
         d = QFileDialog.getExistingDirectory(self, "选择工作目录", self.cwd)
@@ -152,20 +167,24 @@ class TopologyTab(QWidget):
             child.setEnabled(enabled)
 
     def run_pdb2gmx(self):
-        pdb_file = self.pdb_input.text()
-        if not pdb_file or not os.path.exists(pdb_file):
-            QMessageBox.warning(self, "警告", "请先选择有效的 PDB 文件！")
+        # 此时 self.pdb_input.text() 可能只有文件名 "protein.pdb"
+        pdb_filename = self.pdb_input.text()
+        
+        # 拼接完整路径用于检查文件是否存在
+        full_pdb_path = os.path.join(self.cwd, pdb_filename)
+        
+        if not pdb_filename or not os.path.exists(full_pdb_path):
+            QMessageBox.warning(self, "警告", f"在工作目录中未找到文件: {pdb_filename}")
             return
 
-        self.cwd = os.path.dirname(pdb_file)
+        # 注意：这里不应该再重置 self.cwd，因为 self.cwd 已经在第一步由用户显式指定了
+        # self.cwd = os.path.dirname(pdb_file)  <-- 这行代码是错误的，它会把 CWD 改回文件所在目录（虽然现在文件已经在 CWD 了，但逻辑上不对）
         
         ff = self.ff_combo.currentText()
         water = self.water_combo.currentText()
         ignh = self.ignh_check.isChecked()
 
-        # 提取文件名(不含路径)
-        pdb_filename = os.path.basename(pdb_file)
-
+        # 构造命令时只使用文件名，因为 cwd 已经设置正确
         args = ["pdb2gmx", "-f", pdb_filename, "-o", "processed.gro", "-p", "topol.top", "-ff", ff, "-water", water]
         if ignh:
             args.append("-ignh")
