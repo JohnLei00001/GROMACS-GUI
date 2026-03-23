@@ -6,29 +6,36 @@
 
 ## ✨ 功能特性
 
-目前主要模块为 **Solution Simulator** (溶液体系模拟)，支持以下完整流程：
+目前支持两大核心模块：**Solution Simulator (溶液体系模拟)** 和 **Ligand Simulator (蛋白-配体复合物模拟)**。
 
-1.  **拓扑与水箱 (Topology & Water Box)**
-    *   生成拓扑文件
-    *   定义溶剂盒子
-2.  **能量最小化 (Energy Minimization)**
+### 1. 蛋白-配体复合物模拟 (Ligand Simulator) [最新更新]
+提供完整的蛋白-配体复合物体系构建流程：
+*   **配体准备**: 支持导入外部工具 (如 CGenFF, ATB, ACPYPE 等) 生成的配体拓扑 (`.itp`) 和结构 (`.gro/.pdb`) 文件。
+*   **受体处理**: 使用 `pdb2gmx` 处理受体蛋白，支持多种力场和水模型。
+*   **自动复合物构建**: 自动合并蛋白与配体坐标生成 `complex.gro`，并智能更新 `topol.top` 拓扑文件。
+*   **溶剂化与中和**: 定义模拟盒子、添加溶剂 (solvate) 和中和系统电荷 (genion)。
+*   无缝衔接后续的能量最小化、系统平衡和生产模拟流程。
+
+### 2. 溶液体系模拟 (Solution Simulator)
+支持基础的溶液体系完整流程：
+*   **拓扑与水箱 (Topology & Water Box)**: 生成拓扑文件并定义溶剂盒子。
+*   **能量最小化 (Energy Minimization)**
     *   **可视化 MDP 参数编辑器**: 支持图形化配置 integrator, nsteps, emtol 等关键参数
     *   运行能量最小化 (grompp & mdrun)
     *   实时日志输出
-3.  **系统平衡 (System Equilibration)**
+*   **系统平衡 (System Equilibration)**
     *   **NVT 平衡**: 恒温模拟配置，支持温度耦合参数调整
     *   **NPT 平衡**: 恒压模拟配置，支持压力耦合参数调整
     *   集成 MDP 编辑器，轻松修改模拟参数
-4.  **生产模拟 (Production MD)**
+*   **生产模拟 (Production MD)**
     *   配置长时间模拟参数 (md.mdp)
     *   执行正式分子动力学模拟
-5.  **分析与可视化 (Analysis & Visualization)**
+*   **分析与可视化 (Analysis & Visualization)**
     *   **轨迹处理**: 运行 trjconv 去除周期性边界条件 (PBC)
     *   **数据分析与绘图**: 支持一键计算 RMSD, RMSF, Gyrate，并使用 Matplotlib 进行数据可视化
     *   **外部工具集成**: 预留 VMD 等可视化工具的启动接口
 
 > **🚧 正在开发中的模块**:
-> *   **Ligand Simulator**: 蛋白-配体复合物模拟 (WIP)
 > *   **Membrane Simulator**: 膜蛋白体系模拟 (WIP)
 > *   **Polymer Simulator**: 聚合物体系模拟 (WIP)
 
