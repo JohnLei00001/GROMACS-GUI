@@ -33,23 +33,15 @@ class LigandPrepTab(QWidget):
         dir_group.setLayout(dir_layout)
         layout.addWidget(dir_group)
         
-        # === 2. 配体拓扑来源 ===
-        source_group = QGroupBox("2. 配体拓扑来源")
+        # === 2. 导入配体拓扑 ===
+        source_group = QGroupBox("2. 导入配体拓扑")
         source_layout = QVBoxLayout()
         
-        self.mode_group = QButtonGroup(self)
-        self.rb_import = QRadioButton("导入现有拓扑 (.itp + .gro/.pdb)")
-        self.rb_generate = QRadioButton("自动生成拓扑 (使用 ACPYPE/OpenBabel)")
-        self.rb_import.setChecked(True) # 默认导入，因为生成需要环境支持
-        self.mode_group.addButton(self.rb_import)
-        self.mode_group.addButton(self.rb_generate)
+        info_label = QLabel("请提供外部工具 (如 CGenFF, ATB, ACPYPE Server 等) 生成的配体拓扑和结构文件。")
+        info_label.setStyleSheet("color: #666; font-style: italic;")
+        source_layout.addWidget(info_label)
         
-        source_layout.addWidget(self.rb_import)
-        source_layout.addWidget(self.rb_generate)
-        
-        # --- 导入面板 ---
-        self.import_widget = QWidget()
-        import_layout = QFormLayout(self.import_widget)
+        import_layout = QFormLayout()
         
         self.itp_input = QLineEdit()
         btn_browse_itp = QPushButton("浏览 .itp")
@@ -66,33 +58,7 @@ class LigandPrepTab(QWidget):
         btn_confirm_import.clicked.connect(self.confirm_import)
         import_layout.addRow("", btn_confirm_import)
         
-        source_layout.addWidget(self.import_widget)
-        
-        # --- 生成面板 ---
-        self.gen_widget = QWidget()
-        gen_layout = QFormLayout(self.gen_widget)
-        
-        self.mol_input = QLineEdit()
-        btn_browse_mol = QPushButton("浏览 .mol2/.sdf")
-        btn_browse_mol.clicked.connect(lambda: self.browse_file(self.mol_input, "Small Molecule (*.mol2 *.sdf *.pdb)"))
-        
-        self.charge_input = QLineEdit("0")
-        self.multiplicity_input = QLineEdit("1")
-        self.atom_type_combo = QComboBox()
-        self.atom_type_combo.addItems(["gaff", "gaff2", "amber"])
-        
-        gen_layout.addRow("小分子文件:", self.create_browse_row(self.mol_input, btn_browse_mol))
-        gen_layout.addRow("净电荷 (Net Charge):", self.charge_input)
-        gen_layout.addRow("自旋多重度 (Multiplicity):", self.multiplicity_input)
-        gen_layout.addRow("原子类型 (Atom Type):", self.atom_type_combo)
-        
-        btn_run_acpype = QPushButton("运行 ACPYPE 生成拓扑")
-        btn_run_acpype.clicked.connect(self.run_acpype)
-        gen_layout.addRow("", btn_run_acpype)
-        
-        self.gen_widget.setVisible(False)
-        source_layout.addWidget(self.gen_widget)
-        
+        source_layout.addLayout(import_layout)
         source_group.setLayout(source_layout)
         layout.addWidget(source_group)
         
@@ -107,10 +73,6 @@ class LigandPrepTab(QWidget):
 
         layout.addStretch()
 
-        # 连接单选框切换事件
-        self.rb_import.toggled.connect(self.toggle_mode)
-        self.rb_generate.toggled.connect(self.toggle_mode)
-
     def create_browse_row(self, line_edit, button):
         w = QWidget()
         l = QHBoxLayout(w)
@@ -118,11 +80,6 @@ class LigandPrepTab(QWidget):
         l.addWidget(line_edit)
         l.addWidget(button)
         return w
-
-    def toggle_mode(self):
-        is_import = self.rb_import.isChecked()
-        self.import_widget.setVisible(is_import)
-        self.gen_widget.setVisible(not is_import)
 
     def browse_dir(self):
         d = QFileDialog.getExistingDirectory(self, "选择工作目录", self.cwd)
@@ -191,65 +148,6 @@ class LigandPrepTab(QWidget):
             self.finish_setup(itp_path, gro_path)
         else:
             QMessageBox.critical(self, "错误", f"PDB 转 GRO 失败: {message}")
-
-    def run_acpype(self):
-        mol_filename = self.mol_input.text()
-        full_mol_path = os.path.join(self.cwd, mol_filename)
-        
-        if not mol_filename or not os.path.exists(full_mol_path):
-            QMessageBox.warning(self, "警告", f"在工作目录中未找到有效的小分子文件: {mol_filename}")
-            return
-            
-        # 依赖检查：ACPYPE 需要 antechamber (AmberTools)
-        # Windows 上通常难以直接通过 pip 安装 AmberTools，需要 Conda 或 WSL
-        # 我们先检查 antechamber 是否在 PATH 中
-        if not shutil.which("antechamber"):
-            msg = (
-                "❌ **未检测到 AmberTools (antechamber)**\n\n"
-                "ACPYPE 依赖 AmberTools 中的 `antechamber` 程序来生成 GAFF 力场参数。\n"
-                "仅安装 Open Babel 是不够的。\n\n"
-                "解决方案：\n"
-                "1. [推荐] 使用在线服务器生成拓扑 (如 ACPYPE Server 或 LigParGen)，然后使用本软件的【导入】功能。\n"
-                "2. 使用 Conda 安装 AmberTools: `conda install -c conda-forge ambertools`\n"
-                "3. 如果您已安装，请确保 `antechamber` 在系统 PATH 环境变量中。"
-            )
-            QMessageBox.critical(self, "依赖缺失", msg)
-            return
-
-        charge = self.charge_input.text()
-        mult = self.multiplicity_input.text()
-        atom_type = self.atom_type_combo.currentText()
-        
-        # 构造命令 (在 cwd 中运行，只需提供文件名)
-        # 尝试使用 python -m acpype 以规避脚本路径问题
-        import sys
-        args = [sys.executable, "-m", "acpype", "-i", mol_filename, "-c", "user", "-n", charge, "-m", mult, "-a", atom_type]
-        
-        self.main_window.log(f"\n>>> 正在运行: {' '.join(args)}")
-        
-        self.worker_acpype = self.runner.create_worker(args, cwd=self.cwd)
-        self.worker_acpype.output_signal.connect(self.main_window.log)
-        self.worker_acpype.finished_signal.connect(self.on_acpype_finished)
-        self.worker_acpype.start()
-        
-        # 禁用按钮防止重复点击
-        self.gen_widget.setEnabled(False)
-
-    def on_acpype_finished(self, success, message):
-        self.gen_widget.setEnabled(True)
-        if success:
-            # ACPYPE 通常会生成一个以输入文件名命名的目录，或者直接在当前目录生成
-            # 假设生成了 MOL_GMX.itp 和 MOL_GMX.gro (默认行为)
-            # 或者根据输入文件名: input.acpype/input_GMX.itp
-            
-            # 我们需要查找生成的 .itp 和 .gro
-            # 简单起见，遍历 cwd 找最新的 itp/gro
-            
-            # 提示用户检查输出
-            QMessageBox.information(self, "成功", "ACPYPE 运行完成！请在导入面板中选择生成的 .itp 和 .gro 文件。")
-            self.rb_import.setChecked(True) # 切换回导入模式让用户确认
-        else:
-            QMessageBox.critical(self, "错误", f"ACPYPE 运行失败: {message}\n请确保已安装 acpype (pip install acpype) 且相关依赖 (AmberTools/OpenBabel) 正常。")
 
     def finish_setup(self, itp_path, gro_path):
         self.res_info.setText(f"✅ 配体准备就绪！\n拓扑文件: {itp_path}\n结构文件: {gro_path}")

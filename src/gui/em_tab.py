@@ -86,13 +86,16 @@ class EMTab(QWidget):
         layout.addStretch()
 
     def get_cwd(self):
-        # 尝试从 TopologyTab 获取工作目录
+        # 尝试根据当前激活的模块获取工作目录
         try:
-            # 假设 TopologyTab 是第一个标签页
-            topo_tab = self.main_window.solution_tabs.widget(0)
-            return topo_tab.cwd
+            current_idx = self.main_window.stacked_widget.currentIndex()
+            if current_idx == 0: # Solution Simulator
+                return self.main_window.solution_tabs.widget(0).cwd
+            elif current_idx == 1: # Ligand Simulator
+                return self.main_window.ligand_simulator.prep_tab.cwd
         except:
-            return None
+            pass
+        return None
 
     def save_mdp(self):
         cwd = self.get_cwd()
@@ -116,13 +119,19 @@ class EMTab(QWidget):
             return
             
         # 检查输入文件是否存在
-        # 优先使用加了离子的 solvated_ions.gro，如果没有则使用 solvated.gro
-        input_gro = "solvated.gro"
-        if os.path.exists(os.path.join(cwd, "solvated_ions.gro")):
-            input_gro = "solvated_ions.gro"
-            self.main_window.log("检测到 solvated_ions.gro，将使用添加离子后的结构进行能量最小化。")
-            
-        required_files = ["minim.mdp", input_gro, "topol.top"]
+        # 优先使用加了离子的 solvated_ions.gro 或 complex_solv_ions.gro
+        input_gro = None
+        for candidate in ["complex_solv_ions.gro", "solvated_ions.gro", "complex_solv.gro", "solvated.gro", "processed.gro"]:
+            if os.path.exists(os.path.join(cwd, candidate)):
+                input_gro = candidate
+                self.main_window.log(f"检测到 {input_gro}，将使用该结构进行能量最小化。")
+                break
+                
+        if not input_gro:
+            QMessageBox.warning(self, "警告", "未找到输入结构文件，请确保已完成之前的步骤。")
+            return
+
+        required_files = ["minim.mdp", "topol.top"]
         for f in required_files:
             if not os.path.exists(os.path.join(cwd, f)):
                 QMessageBox.warning(self, "警告", f"缺少必要文件: {f}\n请确保已完成之前的步骤。")

@@ -115,10 +115,14 @@ class AnalysisTab(QWidget):
 
     def get_cwd(self):
         try:
-            topo_tab = self.main_window.solution_tabs.widget(0)
-            return topo_tab.cwd
+            current_idx = self.main_window.stacked_widget.currentIndex()
+            if current_idx == 0: # Solution Simulator
+                return self.main_window.solution_tabs.widget(0).cwd
+            elif current_idx == 1: # Ligand Simulator
+                return self.main_window.ligand_simulator.prep_tab.cwd
         except:
-            return None
+            pass
+        return None
 
     def set_buttons_enabled(self, enabled):
         for child in self.findChildren(QPushButton):
