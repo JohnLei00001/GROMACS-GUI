@@ -12,3 +12,6 @@ venv/
 
 # Local test workspace
 local_test/
+
+# Local planning notes
+ROADMAP.md

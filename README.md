@@ -1,103 +1,92 @@
 # GROMACS-GUI
 
-这是一个基于 Python 和 PyQt6 开发的 GROMACS 图形用户界面 (GUI) 工具。旨在简化 GROMACS 分子动力学模拟的操作流程，提供可视化的参数配置和任务管理。
+[中文](./README.md) | [English](./README.en.md)
 
-> **注意**: 本项目目前处于开发阶段 (Work In Progress)。
+GROMACS-GUI 是一个基于 Python 与 PyQt6 的桌面工具，用于将常见的 GROMACS 分子动力学流程组织为更清晰的图形界面操作。
 
-## ✨ 功能特性
+项目当前重点覆盖两类工作流：标准溶液体系模拟，以及蛋白-配体复合物体系构建与后续模拟。
 
-目前支持两大核心模块：**Solution Simulator (溶液体系模拟)** 和 **Ligand Simulator (蛋白-配体复合物模拟)**。
+## 项目概览
 
-### 1. 蛋白-配体复合物模拟 (Ligand Simulator) [最新更新]
-提供完整的蛋白-配体复合物体系构建流程：
-*   **配体准备**: 支持导入外部工具 (如 CGenFF, ATB, ACPYPE 等) 生成的配体拓扑 (`.itp`) 和结构 (`.gro/.pdb`) 文件。
-*   **受体处理**: 使用 `pdb2gmx` 处理受体蛋白，支持多种力场和水模型。
-*   **自动复合物构建**: 自动合并蛋白与配体坐标生成 `complex.gro`，并智能更新 `topol.top` 拓扑文件。
-*   **溶剂化与中和**: 定义模拟盒子、添加溶剂 (solvate) 和中和系统电荷 (genion)。
-*   无缝衔接后续的能量最小化、系统平衡和生产模拟流程。
+### Solution Simulator
 
-### 2. 溶液体系模拟 (Solution Simulator)
-支持基础的溶液体系完整流程：
-*   **拓扑与水箱 (Topology & Water Box)**: 生成拓扑文件并定义溶剂盒子。
-*   **能量最小化 (Energy Minimization)**
-    *   **可视化 MDP 参数编辑器**: 支持图形化配置 integrator, nsteps, emtol 等关键参数
-    *   运行能量最小化 (grompp & mdrun)
-    *   实时日志输出
-*   **系统平衡 (System Equilibration)**
-    *   **NVT 平衡**: 恒温模拟配置，支持温度耦合参数调整
-    *   **NPT 平衡**: 恒压模拟配置，支持压力耦合参数调整
-    *   集成 MDP 编辑器，轻松修改模拟参数
-*   **生产模拟 (Production MD)**
-    *   配置长时间模拟参数 (md.mdp)
-    *   执行正式分子动力学模拟
-*   **分析与可视化 (Analysis & Visualization)**
-    *   **轨迹处理**: 运行 trjconv 去除周期性边界条件 (PBC)
-    *   **数据分析与绘图**: 支持一键计算 RMSD, RMSF, Gyrate，并使用 Matplotlib 进行数据可视化
-    *   **外部工具集成**: 预留 VMD 等可视化工具的启动接口
+面向常规溶液体系，当前支持以下流程：
 
-> **🚧 正在开发中的模块**:
-> *   **Membrane Simulator**: 膜蛋白体系模拟 (WIP)
-> *   **Polymer Simulator**: 聚合物体系模拟 (WIP)
+- 拓扑生成与模拟盒定义
+- 能量最小化
+- NVT / NPT 平衡
+- 生产模拟
+- 轨迹处理与基础分析
 
+其中能量最小化、平衡和生产阶段均提供 MDP 参数编辑能力；分析模块支持 `RMSD`、`RMSF`、`gyrate` 计算与绘图。
 
-## 🛠️ 技术栈
+### Ligand Simulator
 
-*   **编程语言**: Python 3
-*   **GUI 框架**: PyQt6
-*   **数据可视化**: Matplotlib
-*   **后端引擎**: GROMACS (需要单独安装)
+面向蛋白-配体复合物体系，当前支持以下流程：
 
-## 🚀 快速开始
+- 导入外部工具生成的配体拓扑与结构文件，如 `CGenFF`、`ATB`、`ACPYPE`
+- 受体蛋白 `pdb2gmx` 处理
+- 蛋白与配体坐标合并
+- `topol.top` 自动更新
+- 溶剂化与离子添加
+- 与后续 EM、EQ、MD、分析流程衔接
 
-### 前置要求
+## 当前状态
 
-1.  **安装 Python**: 确保系统已安装 Python 3.8 或更高版本。
-2.  **安装 GROMACS**: 本工具依赖 GROMACS 可执行文件 (`gmx` 或 `gmx_mpi`)。请确保已正确安装 GROMACS。
+当前已实现的核心模块：
+
+- `Solution Simulator`
+- `Ligand Simulator`
+
+计划中的模块：
+
+- `Membrane Simulator`
+- `Polymer Simulator`
+
+## 技术栈
+
+- Python 3
+- PyQt6
+- Matplotlib
+- GROMACS
+
+## 安装
+
+### 环境要求
+
+1. 安装 Python 3.8 或更高版本
+2. 安装可用的 GROMACS 环境
 
 ### 安装步骤
 
-1.  克隆仓库：
-    ```bash
-    git clone https://github.com/JohnLei00001/GROMACS-GUI.git
-    cd GROMACS-GUI
-    ```
-
-2.  安装依赖：
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-### ⚙️ 配置
-
-在运行之前，请务必配置您的 GROMACS 可执行文件路径。
-
-打开 `src/core/config.py` 文件，修改 `GMX_PATH` 变量为您本地的 GROMACS 路径：
-
-```python
-# src/core/config.py
-
-# 示例路径，请根据实际情况修改
-GMX_PATH = r"C:\path\to\your\gmx.exe" 
+```bash
+git clone https://github.com/JohnLei00001/GROMACS-GUI.git
+cd GROMACS-GUI
+pip install -r requirements.txt
 ```
 
-### ▶️ 运行
+## 配置
 
-在项目根目录下运行启动脚本：
+运行前请先在 [`src/core/config.py`](./src/core/config.py) 中设置本地 `gmx.exe` 路径：
 
-**Windows:**
+```python
+GMX_PATH = r"C:\path\to\your\gmx.exe"
+```
+
+## 运行
+
+Windows:
+
 ```bash
 run.bat
 ```
 
-**或者使用 Python 直接运行:**
+或直接执行：
+
 ```bash
 python src/main.py
 ```
 
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request 来改进这个项目！
-
-## 📄 许可证
+## License
 
 [MIT License](LICENSE)
