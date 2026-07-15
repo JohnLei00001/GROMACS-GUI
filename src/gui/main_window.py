@@ -59,7 +59,7 @@ class MainWindow(QMainWindow):
         """)
         
         self.nav_list.addItem("Solution Simulator")
-        self.nav_list.addItem("Ligand Simulator [WIP]")
+        self.nav_list.addItem("Ligand Simulator")
         self.nav_list.addItem("Membrane Simulator [WIP]")
         self.nav_list.addItem("Polymer Simulator [WIP]")
         

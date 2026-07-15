@@ -14,7 +14,7 @@ class LigandPrepTab(QWidget):
         super().__init__()
         self.main_window = main_window
         self.runner = main_window.runner
-        self.cwd = os.getcwd() # 默认当前目录，实际应由用户选择工作目录
+        self.cwd = ""  # 由用户选择输入文件或手动指定工作目录
         
         self.init_ui()
 
@@ -25,6 +25,7 @@ class LigandPrepTab(QWidget):
         dir_group = QGroupBox("1. 设置工作目录")
         dir_layout = QHBoxLayout()
         self.dir_input = QLineEdit(self.cwd)
+        self.dir_input.setPlaceholderText("选择输入文件后将自动使用其所在目录")
         btn_browse_dir = QPushButton("浏览...")
         btn_browse_dir.clicked.connect(self.browse_dir)
         dir_layout.addWidget(QLabel("目录:"))
@@ -82,27 +83,22 @@ class LigandPrepTab(QWidget):
         return w
 
     def browse_dir(self):
-        d = QFileDialog.getExistingDirectory(self, "选择工作目录", self.cwd)
+        start_dir = self.cwd or os.getcwd()
+        d = QFileDialog.getExistingDirectory(self, "选择工作目录", start_dir)
         if d:
             self.cwd = d
             self.dir_input.setText(d)
 
     def browse_file(self, line_edit, filter_str):
-        f, _ = QFileDialog.getOpenFileName(self, "选择文件", self.cwd, filter_str)
+        start_dir = self.cwd or os.getcwd()
+        f, _ = QFileDialog.getOpenFileName(self, "选择文件", start_dir, filter_str)
         if f:
+            self.cwd = os.path.dirname(f)
             file_name = os.path.basename(f)
-            target_path = os.path.join(self.cwd, file_name)
-            
-            # 如果源文件不在当前工作目录，则复制
-            if os.path.abspath(f) != os.path.abspath(target_path):
-                try:
-                    shutil.copy(f, target_path)
-                    self.main_window.log(f"已将文件复制到工作目录: {target_path}")
-                except Exception as e:
-                    QMessageBox.critical(self, "错误", f"复制文件失败: {str(e)}")
-                    return
-            
+            self.dir_input.setText(self.cwd)
             line_edit.setText(file_name)
+            self.main_window.log(f"已选择文件: {file_name}")
+            self.main_window.log(f"工作目录已切换为输入文件所在目录: {self.cwd}")
 
     def confirm_import(self):
         itp_filename = self.itp_input.text()
@@ -119,7 +115,7 @@ class LigandPrepTab(QWidget):
             QMessageBox.warning(self, "警告", "文件不存在于工作目录中，请重新选择")
             return
             
-        # 复制文件到工作目录的目标命名 (ligand.itp / ligand.gro)
+        # 复制文件到工作目录的标准命名 (ligand.itp / ligand.gro)
         try:
             target_itp = os.path.join(self.cwd, "ligand.itp")
             target_gro = os.path.join(self.cwd, "ligand.gro")

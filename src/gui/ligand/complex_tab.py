@@ -243,33 +243,55 @@ class ComplexTab(QWidget):
                     insert_itp_idx = i
             
             lig_name = self.get_ligand_molecule_name(lig_itp_path)
+            include_line = f'#include "{self.ligand_itp}"'
+            ligand_include_exists = any(include_line in line for line in top_lines)
             
             new_top_lines = []
             itp_inserted = False
             for i, line in enumerate(top_lines):
                 new_top_lines.append(line)
                 # 如果找到了 forcefield include，就在它后面插入
-                if insert_itp_idx != -1 and i == insert_itp_idx and not itp_inserted:
+                if insert_itp_idx != -1 and i == insert_itp_idx and not itp_inserted and not ligand_include_exists:
                     new_top_lines.append(f'\n; Include ligand topology\n')
                     new_top_lines.append(f'#include "{self.ligand_itp}"\n\n')
                     itp_inserted = True
                 # 如果没找到，就在 [ system ] 之前插入
-                elif insert_itp_idx == -1 and '[ system ]' in line and not itp_inserted:
+                elif insert_itp_idx == -1 and '[ system ]' in line and not itp_inserted and not ligand_include_exists:
                     new_top_lines.insert(-1, f'; Include ligand topology\n#include "{self.ligand_itp}"\n\n')
                     itp_inserted = True
                     
-            # 确保在文件末尾添加配体分子数量
-            # 先检查是否已经有这个配体
+            # 在 [ molecules ] 段中按坐标顺序插入配体分子数量
+            # complex.gro / complex_solv.gro 的原子顺序是 Protein -> Ligand -> Solvent/Ions
+            # 因此 topol.top 中的 [ molecules ] 也必须保持相同顺序，否则 genion 会报 SOL 组不连续
             has_ligand_in_mols = False
             in_molecules_sec = False
-            for line in new_top_lines:
+            molecules_header_idx = -1
+            for i, line in enumerate(new_top_lines):
                 if '[ molecules ]' in line:
                     in_molecules_sec = True
+                    molecules_header_idx = i
                 if in_molecules_sec and lig_name in line:
                     has_ligand_in_mols = True
                     
             if not has_ligand_in_mols:
-                new_top_lines.append(f'{lig_name:<15} 1\n')
+                insert_mol_idx = len(new_top_lines)
+                if molecules_header_idx != -1:
+                    insert_mol_idx = molecules_header_idx + 1
+                    # 跳过 [ molecules ] 标题后的注释/空行/已有蛋白条目，
+                    # 并在第一个溶剂或离子条目前插入配体
+                    for i in range(molecules_header_idx + 1, len(new_top_lines)):
+                        stripped = new_top_lines[i].strip()
+                        if not stripped or stripped.startswith(';'):
+                            continue
+
+                        parts = stripped.split()
+                        mol_name = parts[0] if parts else ""
+                        if mol_name in {"SOL", "WAT", "HOH", "NA", "CL", "K", "CA", "MG"}:
+                            insert_mol_idx = i
+                            break
+                        insert_mol_idx = i + 1
+
+                new_top_lines.insert(insert_mol_idx, f'{lig_name:<15} 1\n')
                 
             with open(top_file, 'w') as f:
                 f.writelines(new_top_lines)

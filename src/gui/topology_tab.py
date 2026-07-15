@@ -3,14 +3,13 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                              QLineEdit, QCheckBox, QMessageBox, QComboBox,
                              QFormLayout)
 import os
-import shutil
 
 class TopologyTab(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window # Reference to main window for logging and running
         self.runner = main_window.runner
-        self.cwd = os.getcwd() # 默认当前目录
+        self.cwd = ""  # 由用户选择输入文件或手动指定工作目录
         
         self.init_ui()
 
@@ -21,6 +20,7 @@ class TopologyTab(QWidget):
         dir_group = QGroupBox("0. 设置工作目录")
         dir_layout = QHBoxLayout()
         self.dir_input = QLineEdit(self.cwd)
+        self.dir_input.setPlaceholderText("选择输入文件后将自动使用其所在目录")
         btn_browse_dir = QPushButton("浏览...")
         btn_browse_dir.clicked.connect(self.browse_dir)
         dir_layout.addWidget(QLabel("工作目录:"))
@@ -135,28 +135,19 @@ class TopologyTab(QWidget):
         layout.addStretch()
 
     def browse_pdb(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "选择 PDB 文件", self.cwd, "PDB Files (*.pdb);;All Files (*)")
+        start_dir = self.cwd or os.getcwd()
+        file_path, _ = QFileDialog.getOpenFileName(self, "选择 PDB 文件", start_dir, "PDB Files (*.pdb);;All Files (*)")
         if file_path:
-            # 获取文件名
+            self.cwd = os.path.dirname(file_path)
             file_name = os.path.basename(file_path)
-            # 目标路径
-            target_path = os.path.join(self.cwd, file_name)
-            
-            # 如果源文件不在当前工作目录，则复制
-            if os.path.abspath(file_path) != os.path.abspath(target_path):
-                try:
-                    shutil.copy(file_path, target_path)
-                    self.main_window.log(f"已将输入文件复制到工作目录: {target_path}")
-                except Exception as e:
-                    QMessageBox.critical(self, "错误", f"复制文件失败: {str(e)}")
-                    return
-
+            self.dir_input.setText(self.cwd)
             self.pdb_input.setText(file_name)
-            # self.cwd 保持不变，由用户在第一步显式设置
-            self.main_window.log(f"已选择输入文件: {file_name} (位于工作目录)")
+            self.main_window.log(f"已选择输入文件: {file_name}")
+            self.main_window.log(f"工作目录已切换为输入文件所在目录: {self.cwd}")
 
     def browse_dir(self):
-        d = QFileDialog.getExistingDirectory(self, "选择工作目录", self.cwd)
+        start_dir = self.cwd or os.getcwd()
+        d = QFileDialog.getExistingDirectory(self, "选择工作目录", start_dir)
         if d:
             self.cwd = d
             self.dir_input.setText(d)
@@ -177,9 +168,6 @@ class TopologyTab(QWidget):
             QMessageBox.warning(self, "警告", f"在工作目录中未找到文件: {pdb_filename}")
             return
 
-        # 注意：这里不应该再重置 self.cwd，因为 self.cwd 已经在第一步由用户显式指定了
-        # self.cwd = os.path.dirname(pdb_file)  <-- 这行代码是错误的，它会把 CWD 改回文件所在目录（虽然现在文件已经在 CWD 了，但逻辑上不对）
-        
         ff = self.ff_combo.currentText()
         water = self.water_combo.currentText()
         ignh = self.ignh_check.isChecked()

@@ -261,7 +261,33 @@ class AnalysisTab(QWidget):
         ax.grid(True)
         
         plot_layout.addWidget(canvas)
+
+        btn_save = QPushButton("Save")
+        btn_save.clicked.connect(lambda: self.save_plot(fig, filename, cwd))
+        plot_layout.addWidget(btn_save)
+
         self.plot_window.show()
+
+    def save_plot(self, fig, source_filename, cwd):
+        default_name = os.path.splitext(source_filename)[0] + ".png"
+        default_path = os.path.join(cwd, default_name)
+
+        save_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "保存图片",
+            default_path,
+            "PNG Files (*.png);;PDF Files (*.pdf);;SVG Files (*.svg)"
+        )
+
+        if not save_path:
+            return
+
+        try:
+            fig.savefig(save_path, dpi=300, bbox_inches="tight")
+            self.main_window.log(f"已保存图像: {save_path}")
+            QMessageBox.information(self, "成功", f"图像已保存到:\n{save_path}")
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"保存图像失败: {str(e)}")
 
     # --- 可视化启动 ---
     

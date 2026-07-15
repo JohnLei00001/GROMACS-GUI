@@ -9,3 +9,6 @@ venv/
 .DS_Store
 *.log
 *.sqlite3
+
+# Local test workspace
+local_test/
