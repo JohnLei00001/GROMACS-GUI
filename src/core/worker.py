@@ -19,6 +19,16 @@ class GromacsWorker(QThread):
         self.output_signal.emit(f">>> 正在后台执行: {' '.join(self.args)}\n")
         
         try:
+            # 推导 GMXLIB 环境变量，让 GROMACS 能找到力场文件
+            # gmx 路径: <prefix>/bin/gmx.exe → 力场目录: <prefix>/share/gromacs/top
+            gmx_bin_dir = os.path.dirname(self.gmx_path)
+            gmx_prefix = os.path.dirname(gmx_bin_dir)
+            gmx_top_dir = os.path.join(gmx_prefix, "share", "gromacs", "top")
+            
+            env = os.environ.copy()
+            if os.path.isdir(gmx_top_dir):
+                env["GMXLIB"] = gmx_top_dir
+            
             # 准备 Popen 参数
             popen_args = {
                 "args": cmd,
@@ -26,9 +36,10 @@ class GromacsWorker(QThread):
                 "stdout": subprocess.PIPE,
                 "stderr": subprocess.STDOUT,
                 "text": True,
-                "encoding": 'utf-8',  # 显式指定编码，Windows下可能需要根据环境调整，但UTF-8通常兼容性好
+                "encoding": 'utf-8',
                 "errors": 'replace',
-                "bufsize": 1
+                "bufsize": 1,
+                "env": env
             }
             
             if self.input_text:

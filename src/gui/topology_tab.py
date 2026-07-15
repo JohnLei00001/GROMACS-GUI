@@ -4,6 +4,48 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                              QFormLayout)
 import os
 
+FALLBACK_FORCEFIELDS = ["amber03", "amber94", "amber96", "amber99", "amber99sb",
+                        "amber99sb-ildn", "charmm27", "charmm36-jul2022", "oplsaa"]
+
+def discover_forcefields():
+    """从 GMXLIB 目录自动发现可用力场"""
+    from core.config import get_gmx_path
+    gmx_path = get_gmx_path()
+    if gmx_path:
+        gmx_bin_dir = os.path.dirname(gmx_path)
+        gmx_prefix = os.path.dirname(gmx_bin_dir)
+        gmx_top_dir = os.path.join(gmx_prefix, "share", "gromacs", "top")
+        if os.path.isdir(gmx_top_dir):
+            discovered = []
+            for name in sorted(os.listdir(gmx_top_dir)):
+                if name.endswith('.ff') and os.path.isdir(os.path.join(gmx_top_dir, name)):
+                    discovered.append(name[:-3])
+            if discovered:
+                return discovered
+    return FALLBACK_FORCEFIELDS
+
+# pdb2gmx 不认识的残基名（水、常见离子），需在运行前自动剥离
+PDB_STRIP_RESIDUES = {"HOH", "WAT", "SOL", "TIP", "TIP3", "NA", "CL", "K",
+                       "CA", "MG", "ZN", "FE", "MN", "SO4", "PO4"}
+
+def strip_pdb_nonprotein(pdb_path):
+    """自动去除 PDB 中 pdb2gmx 不认识的水分子和离子，返回清理后的内容"""
+    with open(pdb_path, 'r') as f:
+        lines = f.readlines()
+    stripped = []
+    removed = 0
+    for line in lines:
+        if line.startswith("ATOM") or line.startswith("HETATM"):
+            resname = line[17:20].strip()
+            if resname in PDB_STRIP_RESIDUES:
+                removed += 1
+                continue
+        stripped.append(line)
+    if removed > 0:
+        with open(pdb_path, 'w') as f:
+            f.writelines(stripped)
+    return removed
+
 class TopologyTab(QWidget):
     def __init__(self, main_window):
         super().__init__()
@@ -55,7 +97,7 @@ class TopologyTab(QWidget):
         # 力场选择
         self.ff_combo = QComboBox()
         # 常见力场选项
-        self.ff_combo.addItems(["amber03", "amber94", "amber96", "amber99", "amber99sb", "amber99sb-ildn", "charmm27", "oplsaa"])
+        self.ff_combo.addItems(discover_forcefields())
         self.ff_combo.setCurrentText("oplsaa")
         pdb_layout.addRow("力场 (-ff):", self.ff_combo)
 
@@ -168,17 +210,22 @@ class TopologyTab(QWidget):
             QMessageBox.warning(self, "警告", f"在工作目录中未找到文件: {pdb_filename}")
             return
 
+        # 自动去除 PDB 中 pdb2gmx 不认识的水分子和离子
+        removed = strip_pdb_nonprotein(full_pdb_path)
+        if removed > 0:
+            self.main_window.log(f">>> 自动清理: 从 PDB 中移除了 {removed} 个非蛋白残基（水/离子）")
+
         ff = self.ff_combo.currentText()
         water = self.water_combo.currentText()
         ignh = self.ignh_check.isChecked()
 
         # 构造命令时只使用文件名，因为 cwd 已经设置正确
-        args = ["pdb2gmx", "-f", pdb_filename, "-o", "processed.gro", "-p", "topol.top", "-ff", ff, "-water", water]
+        args = ["pdb2gmx", "-f", pdb_filename, "-o", "processed.gro", "-p", "topol.top", "-ff", ff, "-water", water, "-ter"]
         if ignh:
             args.append("-ignh")
 
-        # 使用异步 Worker 执行
-        self.worker_pdb2gmx = self.runner.create_worker(args, cwd=self.cwd)
+        # -ter 交互式选择末端类型: 1=NH3+ (N端), 0=COO- (C端)
+        self.worker_pdb2gmx = self.runner.create_worker(args, cwd=self.cwd, input_text="1\n0\n")
         self.worker_pdb2gmx.output_signal.connect(self.main_window.log)
         self.worker_pdb2gmx.finished_signal.connect(self.on_pdb2gmx_finished)
         

@@ -4,10 +4,11 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                              QMessageBox, QFileDialog)
 from PyQt6.QtCore import pyqtSignal
 import os
+import shutil
 
 class LigandPrepTab(QWidget):
-    # 信号：当配体拓扑导入成功时发出，携带 cwd, itp_path
-    topology_ready = pyqtSignal(str, str)
+    # 信号：配体导入成功时发出 (cwd, itp_path, gro_path)
+    topology_ready = pyqtSignal(str, str, str)
 
     def __init__(self, main_window):
         super().__init__()
@@ -33,17 +34,14 @@ class LigandPrepTab(QWidget):
         dir_group.setLayout(dir_layout)
         layout.addWidget(dir_group)
         
-        # === 2. 导入配体拓扑 ===
-        source_group = QGroupBox("2. 导入配体拓扑 (.itp)")
+        # === 2. 导入配体文件 ===
+        source_group = QGroupBox("2. 导入配体文件")
         source_layout = QVBoxLayout()
         
-        # 提示：配体参数从哪来
         info_label = QLabel(
-            "配体 .itp 文件需由外部工具生成，请通过以下任一方式获取：\n"
-            "  - CGenFF (https://cgenff.silcsbio.com/)  上传配体 mol2/sdf → 下载 .str → 转为 .itp\n"
-            "  - ATB (https://atb.uq.edu.au/)  上传配体结构 → 直接下载 GROMACS .itp\n"
-            "  - LigParGen (http://zarbi.chem.yale.edu/ligpargen/)  OPLS-AA 参数\n"
-            "  - PyRED / ACPYPE Server  生成 Amber GAFF → 转为 GROMACS 格式"
+            "请提供外部工具（CGenFF、ATB、LigParGen 等）生成的配体拓扑和结构文件。\n"
+            "拓扑 (.itp) 和结构 (.gro/.pdb) 必须来自同一来源，以保证原子数一致。\n"
+            "配体坐标应已处于蛋白结合位点附近的正确参考系中（如来自对接、实验结构等）。"
         )
         info_label.setStyleSheet("color: #555; font-size: 14px;")
         info_label.setWordWrap(True)
@@ -53,8 +51,13 @@ class LigandPrepTab(QWidget):
         
         self.itp_input = QLineEdit()
         btn_browse_itp = QPushButton("浏览 .itp")
-        btn_browse_itp.clicked.connect(lambda: self.browse_file(self.itp_input, "GROMACS Topology (*.itp)"))
+        btn_browse_itp.clicked.connect(lambda: self.browse_file(self.itp_input, "GROMACS Topology (*.itp *.itp)"))
         import_layout.addRow("拓扑文件 (.itp):", self.create_browse_row(self.itp_input, btn_browse_itp))
+        
+        self.gro_input = QLineEdit()
+        btn_browse_gro = QPushButton("浏览 .gro/.pdb")
+        btn_browse_gro.clicked.connect(lambda: self.browse_file(self.gro_input, "Structure Files (*.gro *.pdb)"))
+        import_layout.addRow("结构文件 (.gro/.pdb):", self.create_browse_row(self.gro_input, btn_browse_gro))
         
         btn_confirm_import = QPushButton("确认导入")
         btn_confirm_import.clicked.connect(self.confirm_import)
@@ -67,7 +70,7 @@ class LigandPrepTab(QWidget):
         # === 3. 结果预览 ===
         res_group = QGroupBox("3. 结果预览")
         res_layout = QVBoxLayout()
-        self.res_info = QLabel("尚未导入配体拓扑。")
+        self.res_info = QLabel("尚未导入配体文件。")
         self.res_info.setWordWrap(True)
         res_layout.addWidget(self.res_info)
         res_group.setLayout(res_layout)
@@ -103,30 +106,44 @@ class LigandPrepTab(QWidget):
 
     def confirm_import(self):
         itp_filename = self.itp_input.text()
+        gro_filename = self.gro_input.text()
         
-        if not itp_filename:
-            QMessageBox.warning(self, "警告", "请提供 .itp 文件")
+        if not itp_filename or not gro_filename:
+            QMessageBox.warning(self, "警告", "请同时提供 .itp 和 .gro/.pdb 文件")
             return
             
         full_itp_path = os.path.join(self.cwd, itp_filename)
+        full_gro_path = os.path.join(self.cwd, gro_filename)
             
         if not os.path.exists(full_itp_path):
-            QMessageBox.warning(self, "警告", "文件不存在于工作目录中，请重新选择")
+            QMessageBox.warning(self, "警告", "拓扑文件不存在于工作目录中，请重新选择")
+            return
+        if not os.path.exists(full_gro_path):
+            QMessageBox.warning(self, "警告", "结构文件不存在于工作目录中，请重新选择")
             return
             
-        # 标准化文件名为 ligand.itp
         try:
-            import shutil
+            # 标准化文件名为 ligand.itp / ligand.gro
             target_itp = os.path.join(self.cwd, "ligand.itp")
             if os.path.abspath(full_itp_path) != os.path.abspath(target_itp):
                 shutil.copy(full_itp_path, target_itp)
             
+            # 判断扩展名，统一为 .gro
+            ext = os.path.splitext(gro_filename)[1].lower()
+            if ext == '.pdb':
+                target_gro = os.path.join(self.cwd, "ligand.pdb")
+            else:
+                target_gro = os.path.join(self.cwd, "ligand.gro")
+            if os.path.abspath(full_gro_path) != os.path.abspath(target_gro):
+                shutil.copy(full_gro_path, target_gro)
+            
             self.res_info.setText(
-                f"✅ 配体拓扑已就绪！\n"
-                f"拓扑文件: {target_itp}\n\n"
-                f"下一步：请在「复合物拓扑与水箱」标签页中选择复合物 PDB 文件。"
+                f"✅ 配体文件已就绪！\n"
+                f"拓扑: {target_itp}\n"
+                f"结构: {target_gro}\n\n"
+                f"下一步：请在「复合物拓扑与水箱」标签页中选择蛋白 PDB 文件。"
             )
             self.res_info.setStyleSheet("color: green; font-weight: bold;")
-            self.topology_ready.emit(self.cwd, target_itp)
+            self.topology_ready.emit(self.cwd, target_itp, target_gro)
         except Exception as e:
             QMessageBox.critical(self, "错误", f"导入失败: {str(e)}")

@@ -27,6 +27,15 @@ class GromacsRunner:
         if self.gmx_path is None:
             return False, "GROMACS 路径未配置，请先设置 GROMACS 可执行文件路径。"
         cmd = [self.gmx_path] + args
+        
+        # 设置 GMXLIB 使 GROMACS 能找到力场文件
+        gmx_bin_dir = os.path.dirname(self.gmx_path)
+        gmx_prefix = os.path.dirname(gmx_bin_dir)
+        gmx_top_dir = os.path.join(gmx_prefix, "share", "gromacs", "top")
+        env = os.environ.copy()
+        if os.path.isdir(gmx_top_dir):
+            env["GMXLIB"] = gmx_top_dir
+        
         try:
             result = subprocess.run(
                 cmd,
@@ -37,7 +46,8 @@ class GromacsRunner:
                 text=True,
                 encoding='utf-8',
                 errors='replace',
-                check=True
+                check=True,
+                env=env
             )
             return True, result.stdout
         except subprocess.CalledProcessError as e:
