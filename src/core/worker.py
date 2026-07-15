@@ -1,6 +1,6 @@
 import subprocess
-import os
 from PyQt6.QtCore import QObject, pyqtSignal, QThread
+from .config import get_gmx_env
 
 class GromacsWorker(QThread):
     # 信号定义
@@ -19,15 +19,8 @@ class GromacsWorker(QThread):
         self.output_signal.emit(f">>> 正在后台执行: {' '.join(self.args)}\n")
         
         try:
-            # 推导 GMXLIB 环境变量，让 GROMACS 能找到力场文件
-            # gmx 路径: <prefix>/bin/gmx.exe → 力场目录: <prefix>/share/gromacs/top
-            gmx_bin_dir = os.path.dirname(self.gmx_path)
-            gmx_prefix = os.path.dirname(gmx_bin_dir)
-            gmx_top_dir = os.path.join(gmx_prefix, "share", "gromacs", "top")
-            
-            env = os.environ.copy()
-            if os.path.isdir(gmx_top_dir):
-                env["GMXLIB"] = gmx_top_dir
+            # 设置 GMXLIB 环境变量，让 GROMACS 能找到力场文件
+            env = get_gmx_env()
             
             # 准备 Popen 参数
             popen_args = {

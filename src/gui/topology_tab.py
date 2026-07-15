@@ -9,19 +9,15 @@ FALLBACK_FORCEFIELDS = ["amber03", "amber94", "amber96", "amber99", "amber99sb",
 
 def discover_forcefields():
     """从 GMXLIB 目录自动发现可用力场"""
-    from core.config import get_gmx_path
-    gmx_path = get_gmx_path()
-    if gmx_path:
-        gmx_bin_dir = os.path.dirname(gmx_path)
-        gmx_prefix = os.path.dirname(gmx_bin_dir)
-        gmx_top_dir = os.path.join(gmx_prefix, "share", "gromacs", "top")
-        if os.path.isdir(gmx_top_dir):
-            discovered = []
-            for name in sorted(os.listdir(gmx_top_dir)):
-                if name.endswith('.ff') and os.path.isdir(os.path.join(gmx_top_dir, name)):
-                    discovered.append(name[:-3])
-            if discovered:
-                return discovered
+    from core.config import get_gmx_top_dir
+    gmx_top_dir = get_gmx_top_dir()
+    if gmx_top_dir:
+        discovered = []
+        for name in sorted(os.listdir(gmx_top_dir)):
+            if name.endswith('.ff') and os.path.isdir(os.path.join(gmx_top_dir, name)):
+                discovered.append(name[:-3])
+        if discovered:
+            return discovered
     return FALLBACK_FORCEFIELDS
 
 # pdb2gmx 不认识的残基名（水、常见离子），需在运行前自动剥离

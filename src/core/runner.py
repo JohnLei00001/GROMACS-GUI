@@ -1,6 +1,5 @@
 import subprocess
-import os
-from .config import get_gmx_path
+from .config import get_gmx_path, get_gmx_env
 from .worker import GromacsWorker
 
 class GromacsRunner:
@@ -29,12 +28,7 @@ class GromacsRunner:
         cmd = [self.gmx_path] + args
         
         # 设置 GMXLIB 使 GROMACS 能找到力场文件
-        gmx_bin_dir = os.path.dirname(self.gmx_path)
-        gmx_prefix = os.path.dirname(gmx_bin_dir)
-        gmx_top_dir = os.path.join(gmx_prefix, "share", "gromacs", "top")
-        env = os.environ.copy()
-        if os.path.isdir(gmx_top_dir):
-            env["GMXLIB"] = gmx_top_dir
+        env = get_gmx_env()
         
         try:
             result = subprocess.run(

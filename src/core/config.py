@@ -72,6 +72,45 @@ def save_gmx_path(path):
         print(f"警告：无法保存配置文件: {e}")
 
 
+def get_gmx_top_dir():
+    """
+    获取 GROMACS 力场拓扑文件目录 (GMXLIB)。
+    优先级：GMXLIB 环境变量 > GMXDATA 环境变量 > 从 gmx 路径推导 > None
+    
+    GROMACS 需要 GMXLIB 指向 share/gromacs/top 才能找到力场文件。
+    如果用户已设置该环境变量，直接沿用；否则尝试从 gmx 可执行文件
+    路径推导（假定 <prefix>/bin/gmx → <prefix>/share/gromacs/top）。
+    """
+    # 1. 优先读取用户已设置的环境变量
+    for var in ("GMXLIB", "GMXDATA"):
+        env_val = os.environ.get(var, "")
+        if env_val and os.path.isdir(env_val):
+            return env_val
+
+    # 2. 从 gmx 可执行文件路径推导
+    gmx_path = get_gmx_path()
+    if gmx_path:
+        gmx_bin_dir = os.path.dirname(gmx_path)
+        gmx_prefix = os.path.dirname(gmx_bin_dir)
+        derived = os.path.join(gmx_prefix, "share", "gromacs", "top")
+        if os.path.isdir(derived):
+            return derived
+
+    return None
+
+
+def get_gmx_env():
+    """
+    构建包含正确 GMXLIB 设置的子进程环境变量字典。
+    调用方应使用此字典传递给 subprocess 的 env 参数。
+    """
+    env = os.environ.copy()
+    top_dir = get_gmx_top_dir()
+    if top_dir:
+        env["GMXLIB"] = top_dir
+    return env
+
+
 def needs_configuration():
     """检查是否需要首次配置 GROMACS 路径"""
     return get_gmx_path() is None
