@@ -4,7 +4,7 @@
 
 GROMACS-GUI 是一个基于 Python 与 PyQt6 的桌面工具，用于将常见的 GROMACS 分子动力学流程组织为更清晰的图形界面操作。
 
-项目当前重点覆盖两类工作流：标准溶液体系模拟，以及蛋白-配体复合物体系构建与后续模拟。
+项目当前主要覆盖两类工作流：标准溶液体系模拟，以及蛋白-配体复合物体系构建与后续模拟。
 
 ## 项目概览
 
@@ -67,11 +67,11 @@ pip install -r requirements.txt
 
 ## 配置
 
-运行前请先在 [`src/core/config.py`](./src/core/config.py) 中设置本地 `gmx.exe` 路径：
+启动时会自动检测系统 PATH 中的 GROMACS。如未检测到，应用会弹出对话框引导选择 `gmx` 可执行文件路径。
 
-```python
-GMX_PATH = r"C:\path\to\your\gmx.exe"
-```
+也可随时通过界面上的「测试 GROMACS 环境」按钮重新配置。
+
+如需手动指定，可编辑 [`src/core/config.py`](./src/core/config.py) 中的默认路径。
 
 ## 运行
 
@@ -81,11 +81,21 @@ Windows:
 run.bat
 ```
 
+Linux / macOS:
+
+```bash
+bash run.sh
+```
+
 或直接执行：
 
 ```bash
 python src/main.py
 ```
+
+## 反馈与贡献
+
+欢迎通过 [Issues](https://github.com/JohnLei00001/GROMACS-GUI/issues) 提交使用中遇到的问题或功能建议。项目仍在持续完善。
 
 ## License
 

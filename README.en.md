@@ -67,11 +67,11 @@ pip install -r requirements.txt
 
 ## Configuration
 
-Before running the application, set the local `gmx.exe` path in [`src/core/config.py`](./src/core/config.py):
+On first launch the application will attempt to detect GROMACS from your system `PATH`. If not found, a dialog will appear to help you locate the `gmx` executable.
 
-```python
-GMX_PATH = r"C:\path\to\your\gmx.exe"
-```
+You can also reconfigure at any time via the **Test GROMACS** button in the main window.
+
+For manual configuration, edit the default path in [`src/core/config.py`](./src/core/config.py).
 
 ## Run
 
@@ -81,11 +81,21 @@ On Windows:
 run.bat
 ```
 
+On Linux / macOS:
+
+```bash
+bash run.sh
+```
+
 Or run directly with Python:
 
 ```bash
 python src/main.py
 ```
+
+## Feedback & Contributing
+
+Issues and suggestions are welcome via [GitHub Issues](https://github.com/JohnLei00001/GROMACS-GUI/issues). The project is still evolving — feedback and patience are appreciated.
 
 ## License
 

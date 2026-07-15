@@ -7,6 +7,15 @@ class GromacsRunner:
     def __init__(self):
         self.gmx_path = get_gmx_path()
 
+    def is_ready(self):
+        """检查 GROMACS 路径是否已配置"""
+        return self.gmx_path is not None
+
+    def update_path(self):
+        """重新读取配置中的 GROMACS 路径（用于用户首次配置后）"""
+        from .config import get_gmx_path as _get
+        self.gmx_path = _get()
+
     def run_command(self, args, cwd=None, input_text=None):
         """
         同步执行 GROMACS 命令并返回输出 (保留用于快速、无阻塞的命令)
@@ -15,6 +24,8 @@ class GromacsRunner:
         :param input_text: 标准输入内容
         :return: (bool, str) 成功与否，以及输出日志
         """
+        if self.gmx_path is None:
+            return False, "GROMACS 路径未配置，请先设置 GROMACS 可执行文件路径。"
         cmd = [self.gmx_path] + args
         try:
             result = subprocess.run(

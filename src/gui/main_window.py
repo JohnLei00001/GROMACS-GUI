@@ -1,13 +1,16 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QPushButton, QTextEdit, 
-                             QLabel, QTabWidget, QMessageBox, QListWidget, QStackedWidget)
+                             QLabel, QTabWidget, QMessageBox, QListWidget, 
+                             QStackedWidget, QFileDialog)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 import os
 import sys
+import platform
 
 # 导入 GROMACS 运行器
 from core.runner import GromacsRunner
+from core.config import needs_configuration, save_gmx_path
 from gui.topology_tab import TopologyTab
 from gui.em_tab import EMTab
 from gui.eq_tab import EQTab
@@ -22,6 +25,9 @@ class MainWindow(QMainWindow):
         self.resize(1000, 750)
         
         self.runner = GromacsRunner()
+        
+        # 首次启动：自动检测或手动配置 GROMACS 路径
+        self._ensure_gmx_configured()
         
         # 主布局: 水平分割 (左侧导航, 右侧内容)
         self.central_widget = QWidget()
@@ -150,10 +156,52 @@ class MainWindow(QMainWindow):
 
     def test_gmx(self):
         """测试GROMACS是否可用"""
+        if not self.runner.is_ready():
+            QMessageBox.warning(self, "未配置", "GROMACS 路径未设置，请先配置。")
+            self._configure_gmx_path()
+            return
         self.log("\n>>> 正在运行: gmx -version")
         success, output = self.runner.run_command(['-version'])
         self.log(output)
         if success:
             QMessageBox.information(self, "成功", "GROMACS 运行正常！")
         else:
-            QMessageBox.critical(self, "错误", "GROMACS 运行失败，请检查路径。")
+            QMessageBox.critical(self, "错误", f"GROMACS 运行失败，请检查路径。\n\n{output}")
+
+    def _ensure_gmx_configured(self):
+        """确保 GROMACS 路径已配置，未配置则引导用户设置"""
+        if not self.runner.is_ready():
+            self._configure_gmx_path()
+
+    def _configure_gmx_path(self):
+        """弹出对话框让用户选择 GROMACS 可执行文件路径"""
+        is_windows = platform.system() == "Windows"
+        if is_windows:
+            file_filter = "GROMACS 可执行文件 (gmx.exe);;所有文件 (*.*)"
+        else:
+            file_filter = "所有文件 (*)"
+
+        msg = (
+            "未检测到 GROMACS 可执行文件。\n\n"
+            "请选择 gmx 可执行文件：\n"
+            + ("  Windows 示例: C:\\Gromacs\\bin\\gmx.exe\n" if is_windows else
+               "  Linux 示例: /usr/local/gromacs/bin/gmx\n")
+            + "\n如已添加到 PATH 环境变量，可在终端中运行 'which gmx' 或 'where gmx' 查看路径。"
+        )
+
+        QMessageBox.information(self, "首次配置", msg)
+
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "选择 GROMACS 可执行文件 (gmx)",
+            "",
+            file_filter
+        )
+
+        if path:
+            save_gmx_path(path)
+            self.runner.update_path()
+            self.log(f"[系统] GROMACS 路径已配置: {path}")
+        else:
+            self.log("[系统] 警告：未配置 GROMACS 路径，部分功能不可用。\n"
+                      "       可稍后点击「测试 GROMACS 环境」按钮重新配置。")
