@@ -43,7 +43,7 @@ class LigandPrepTab(QWidget):
             "拓扑 (.itp) 和结构 (.gro/.pdb) 必须来自同一来源，以保证原子数一致。\n"
             "配体坐标应已处于蛋白结合位点附近的正确参考系中（如来自对接、实验结构等）。"
         )
-        info_label.setStyleSheet("color: #555; font-size: 14px;")
+        info_label.setStyleSheet("color: #888; font-size: 14px;")
         info_label.setWordWrap(True)
         source_layout.addWidget(info_label)
         

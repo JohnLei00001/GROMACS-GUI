@@ -277,8 +277,11 @@ class TopologyTab(QWidget):
             QMessageBox.warning(self, "警告", "未找到 newbox.gro 或 topol.top，请确保上一阶段已成功执行！")
             return
 
-        # 默认使用 spc216.gro 作为溶剂盒子
-        args = ["solvate", "-cp", "newbox.gro", "-cs", "spc216.gro", "-o", "solvated.gro", "-p", "topol.top"]
+        # 根据用户选择的水模型自动匹配溶剂模板文件
+        from core.config import get_solvent_template
+        solvent = get_solvent_template(self.water_combo.currentText())
+        self.main_window.log(f"[溶剂化] 水模型: {self.water_combo.currentText()}, 溶剂模板: {solvent}")
+        args = ["solvate", "-cp", "newbox.gro", "-cs", solvent, "-o", "solvated.gro", "-p", "topol.top"]
 
         # 使用异步 Worker 执行
         self.worker_solvate = self.runner.create_worker(args, cwd=self.cwd)

@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt6.QtCore import Qt
 import os
 import sys
+import re
 
 # 尝试导入 matplotlib，如果失败则禁用绘图功能
 try:
@@ -20,7 +21,8 @@ class AnalysisTab(QWidget):
         super().__init__()
         self.main_window = main_window
         self.runner = main_window.runner
-        
+        self._group_cache = {}  # cwd -> {name: number}
+
         self.init_ui()
 
     def init_ui(self):
@@ -128,6 +130,74 @@ class AnalysisTab(QWidget):
         for child in self.findChildren(QPushButton):
             child.setEnabled(enabled)
 
+    # --- 动态索引组检测 ---
+
+    def _get_group_map(self, cwd):
+        """
+        通过 gmx make_ndx 获取指定工作目录下体系的索引组名→编号映射。
+        结果按 cwd 缓存，仅首次调用时执行命令。
+        返回 dict: {"System": 0, "Protein": 1, "Backbone": 4, ...}
+        失败时返回空 dict。
+        """
+        if cwd in self._group_cache:
+            return self._group_cache[cwd]
+
+        # 尝试多个可能的结构文件作为 make_ndx 的输入
+        candidates = ["md_0_1.tpr", "npt.tpr", "em.tpr", "topol.tpr"]
+        tpr_file = None
+        for name in candidates:
+            if os.path.exists(os.path.join(cwd, name)):
+                tpr_file = name
+                break
+
+        if not tpr_file:
+            self.main_window.log("[分析] 未找到 .tpr 文件，无法自动检测索引组，将使用默认编号。")
+            self._group_cache[cwd] = {}
+            return {}
+
+        self.main_window.log(f"[分析] 正在检测体系索引组 (基于 {tpr_file})...")
+        success, output = self.runner.run_command(
+            ["make_ndx", "-f", tpr_file, "-o", "dummy.ndx"],
+            cwd=cwd,
+            input_text="q\n"
+        )
+
+        groups = {}
+        if success and output:
+            for line in output.split('\n'):
+                m = re.match(r'^\s*(\d+)\s+(\S+)\s*:', line)
+                if m:
+                    groups[m.group(2)] = int(m.group(1))
+
+        if groups:
+            self.main_window.log(f"[分析] 检测到 {len(groups)} 个索引组。")
+        else:
+            self.main_window.log("[分析] 未能解析索引组列表，将使用默认编号。")
+
+        # 清理 make_ndx 生成的临时文件
+        dummy = os.path.join(cwd, "dummy.ndx")
+        if os.path.exists(dummy):
+            try:
+                os.remove(dummy)
+            except OSError:
+                pass
+
+        self._group_cache[cwd] = groups
+        return groups
+
+    def _resolve_group(self, cwd, preferred_names, fallback_number):
+        """
+        根据优选名称列表查找组号，找不到则返回 fallback_number。
+        preferred_names: 按优先级排列的组名列表，如 ["Backbone", "MainChain"]
+        """
+        groups = self._get_group_map(cwd)
+        for name in preferred_names:
+            if name in groups:
+                self.main_window.log(f"[分析] 自动匹配组: '{name}' -> #{groups[name]}")
+                return groups[name]
+        self.main_window.log(f"[分析] 未找到优选组 {preferred_names}，使用默认编号: #{fallback_number}")
+        return fallback_number
+
     # --- 运行逻辑 ---
 
     def run_trjconv(self):
@@ -149,10 +219,11 @@ class AnalysisTab(QWidget):
             args.append("-center")
             
         # trjconv 需要选择组 (通常选 Protein 用于居中，System 用于输出)
-        # 如果启用了 center，需要两次输入 (1: Protein, 0: System)
-        # 如果没启用 center，通常只需要一次输入 (0: System)
+        # 动态检测组号，找不到则使用默认值
         
-        input_str = "1\n0\n" if center else "0\n" 
+        protein_num = self._resolve_group(cwd, ["Protein", "Protein-H"], 1)
+        system_num = self._resolve_group(cwd, ["System"], 0)
+        input_str = f"{protein_num}\n{system_num}\n" if center else f"{system_num}\n"
         
         self.worker_trj = self.runner.create_worker(args, cwd=cwd, input_text=input_str)
         self.worker_trj.output_signal.connect(self.main_window.log)
@@ -169,15 +240,29 @@ class AnalysisTab(QWidget):
             QMessageBox.critical(self, "错误", f"trjconv 失败: {message}")
 
     def run_rmsd(self):
-        self._run_analysis("rms", "rmsd.xvg", "4\n4\n", "计算 RMSD (Backbone)") # 4=Backbone
+        # RMSD: 两个组选择（拟合组 + 计算组），通常都选 Backbone
+        self._run_analysis("rms", "rmsd.xvg",
+                           [(["Backbone", "MainChain"], 4), (["Backbone", "MainChain"], 4)],
+                           "RMSD (Backbone)")
 
     def run_rmsf(self):
-        self._run_analysis("rmsf", "rmsf.xvg", "1\n", "计算 RMSF (Protein)") # 1=Protein
+        # RMSF: 单个组选择，Protein 或 C-alpha
+        self._run_analysis("rmsf", "rmsf.xvg",
+                           [(["Protein", "C-alpha"], 1)],
+                           "RMSF")
 
     def run_gyrate(self):
-        self._run_analysis("gyrate", "gyrate.xvg", "1\n", "计算回转半径 (Protein)") # 1=Protein
+        # Gyrate: 单个组选择，Protein
+        self._run_analysis("gyrate", "gyrate.xvg",
+                           [(["Protein"], 1)],
+                           "回转半径")
 
-    def _run_analysis(self, tool, output_file, input_group, desc):
+    def _run_analysis(self, tool, output_file, group_specs, desc):
+        """
+        执行 GROMACS 分析命令。
+        group_specs: [(preferred_names_list, fallback_num), ...]
+                     每个元素对应一个组选择提示符。
+        """
         cwd = self.get_cwd()
         if not cwd: return
         
@@ -195,6 +280,13 @@ class AnalysisTab(QWidget):
         # rmsf 需要 -res 标志来计算残基平均
         if tool == "rmsf":
             args.append("-res")
+
+        # 动态解析组号
+        input_parts = []
+        for preferred_names, fallback_num in group_specs:
+            num = self._resolve_group(cwd, preferred_names, fallback_num)
+            input_parts.append(str(num))
+        input_group = "\n".join(input_parts) + "\n"
             
         self.worker_ana = self.runner.create_worker(args, cwd=cwd, input_text=input_group)
         self.worker_ana.output_signal.connect(self.main_window.log)

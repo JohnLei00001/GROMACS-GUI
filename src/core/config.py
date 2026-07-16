@@ -114,3 +114,24 @@ def get_gmx_env():
 def needs_configuration():
     """检查是否需要首次配置 GROMACS 路径"""
     return get_gmx_path() is None
+
+
+# 水模型 → 溶剂模板文件映射（GROMACS 标准约定）
+WATER_TO_SOLVENT = {
+    "spce":  "spc216.gro",
+    "tip3p": "tip3p.gro",
+    "tip4p": "tip4p.gro",
+    "tip5p": "tip5p.gro",
+}
+
+
+def get_solvent_template(water_model):
+    """
+    根据水模型名称返回对应的溶剂模板文件名。
+    如果 GMXLIB 中存在对应文件则返回，否则回退到 spc216.gro。
+    """
+    filename = WATER_TO_SOLVENT.get(water_model, "spc216.gro")
+    top_dir = get_gmx_top_dir()
+    if top_dir and os.path.isfile(os.path.join(top_dir, filename)):
+        return filename
+    return "spc216.gro"

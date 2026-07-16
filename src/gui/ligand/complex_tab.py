@@ -69,7 +69,7 @@ class ComplexTab(QWidget):
         build_layout = QVBoxLayout()
         
         build_info = QLabel("合并 protein.gro + ligand.gro，更新 topol.top 加入配体拓扑。\n配体坐标应已处于正确空间位置（来自对接、实验结构等）。")
-        build_info.setStyleSheet("color: #555; font-style: italic;")
+        build_info.setStyleSheet("color: #888; font-style: italic;")
         build_layout.addWidget(build_info)
         
         btn_build_complex = QPushButton("合并生成复合物 (complex.gro & topol.top)")
@@ -342,7 +342,10 @@ class ComplexTab(QWidget):
             QMessageBox.critical(self, "错误", f"editconf 失败:\n{message}")
             return
             
-        args_solvate = ["solvate", "-cp", "complex_newbox.gro", "-cs", "spc216.gro", "-o", "complex_solv.gro", "-p", "topol.top"]
+        from core.config import get_solvent_template
+        solvent = get_solvent_template(self.water_combo.currentText())
+        self.main_window.log(f"[溶剂化] 水模型: {self.water_combo.currentText()}, 溶剂模板: {solvent}")
+        args_solvate = ["solvate", "-cp", "complex_newbox.gro", "-cs", solvent, "-o", "complex_solv.gro", "-p", "topol.top"]
         self.main_window.log(f"\n>>> 运行 solvate: {' '.join(args_solvate)}")
         
         self.worker_solvate = self.runner.create_worker(args_solvate, cwd=self.cwd)
