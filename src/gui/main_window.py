@@ -16,6 +16,7 @@ from gui.em_tab import EMTab
 from gui.eq_tab import EQTab
 from gui.md_tab import MDTab
 from gui.ligand.ligand_simulator import LigandSimulator
+from gui.umbrella.umbrella_simulator import UmbrellaSimulator
 from gui.analysis_tab import AnalysisTab
 
 class MainWindow(QMainWindow):
@@ -66,7 +67,7 @@ class MainWindow(QMainWindow):
         
         self.nav_list.addItem("Solution Simulator")
         self.nav_list.addItem("Ligand Simulator")
-        self.nav_list.addItem("Membrane Simulator [WIP]")
+        self.nav_list.addItem("Umbrella Sampling [WIP]")
         self.nav_list.addItem("Polymer Simulator [WIP]")
         
         self.main_layout.addWidget(self.nav_list)
@@ -92,8 +93,11 @@ class MainWindow(QMainWindow):
         self.ligand_simulator = LigandSimulator(self)
         self.stacked_widget.addWidget(self.ligand_simulator)
         
-        # --- 模块 3,4: 占位符 (WIP) ---
-        self.setup_wip_module("Membrane Simulator 正在开发中...\n\n未来将支持磷脂双分子层插入与定向")
+        # --- 模块 3: Umbrella Sampling ---
+        self.umbrella_simulator = UmbrellaSimulator(self)
+        self.stacked_widget.addWidget(self.umbrella_simulator)
+        
+        # --- 模块 4: 占位符 (WIP) ---
         self.setup_wip_module("Polymer Simulator 正在开发中...\n\n敬请期待！")
         
         # 连接导航点击事件

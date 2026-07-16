@@ -4,7 +4,7 @@
 
 GROMACS-GUI is a desktop application built with Python and PyQt6 for organizing common GROMACS molecular dynamics workflows into a clearer graphical interface.
 
-The project currently focuses on two workflow groups: standard solution-system simulation and protein-ligand complex preparation followed by simulation.
+The project currently focuses on three workflow groups: standard solution-system simulation, protein-ligand complex preparation followed by simulation, and umbrella sampling free-energy calculations (under development).
 
 ## Overview
 
@@ -31,12 +31,25 @@ For protein-ligand complex systems, the current workflow includes:
 - solvation and ion addition
 - integration with downstream EM, EQ, MD, and analysis steps
 
+### Umbrella Sampling [WIP]
+
+For free-energy profiles along a reaction coordinate, the current workflow includes:
+
+- system building and box solvation
+- energy minimization
+- NVT / NPT equilibration
+- pull simulation
+- window extraction
+- batch window MD
+- WHAM analysis
+
 ## Status
 
 Implemented core modules:
 
 - `Solution Simulator`
 - `Ligand Simulator`
+- `Umbrella Sampling [WIP]`
 
 Planned modules:
 
