@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QPushButton, QTextEdit, 
                              QLabel, QTabWidget, QMessageBox, QListWidget, 
-                             QStackedWidget, QFileDialog)
+                             QStackedWidget, QFileDialog, QSplitter)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 import os
@@ -71,14 +71,18 @@ class MainWindow(QMainWindow):
         
         self.main_layout.addWidget(self.nav_list)
         
-        # === 右侧主体区域 ===
+        # === 右侧主体区域（QSplitter 可拖拽调整上下比例） ===
         self.right_widget = QWidget()
         self.right_layout = QVBoxLayout(self.right_widget)
+        self.right_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.addWidget(self.right_widget, stretch=1)
+        
+        self.splitter = QSplitter(Qt.Orientation.Vertical)
+        self.right_layout.addWidget(self.splitter)
         
         # 顶部 StackedWidget 用于切换不同的 Builder
         self.stacked_widget = QStackedWidget()
-        self.right_layout.addWidget(self.stacked_widget, stretch=3)
+        self.splitter.addWidget(self.stacked_widget)
         
         # --- 模块 1: Solution Simulator ---
         self.solution_tabs = QTabWidget()
@@ -106,16 +110,26 @@ class MainWindow(QMainWindow):
         self.nav_list.setCurrentRow(0)
         
         # 底部日志输出窗口 (全局共享)
+        self.log_widget = QWidget()
+        log_layout = QVBoxLayout(self.log_widget)
+        log_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
         self.log_output.setStyleSheet("background-color: #1e1e1e; color: #d4d4d4; font-family: Consolas;")
-        self.right_layout.addWidget(QLabel("全局运行日志:"))
-        self.right_layout.addWidget(self.log_output, stretch=1)
+        log_layout.addWidget(QLabel("全局运行日志:"))
+        log_layout.addWidget(self.log_output, stretch=1)
         
         # 测试GROMACS按钮
         self.btn_test = QPushButton("测试 GROMACS 环境")
         self.btn_test.clicked.connect(self.test_gmx)
-        self.right_layout.addWidget(self.btn_test)
+        log_layout.addWidget(self.btn_test)
+        
+        self.splitter.addWidget(self.log_widget)
+        
+        # 设置初始比例（上 75% : 下 25%）
+        self.splitter.setStretchFactor(0, 3)
+        self.splitter.setStretchFactor(1, 1)
 
     def setup_wip_module(self, text):
         widget = QWidget()
