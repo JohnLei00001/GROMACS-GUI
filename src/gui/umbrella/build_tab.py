@@ -1,14 +1,21 @@
+"""Umbrella Build Tab —— 体系构建（PDB 构建 / 导入已有体系）
+
+设计原则：
+- 构建完成后创建 UmbrellaContext，携带明确的 structure_file 和 topology_file
+"""
+
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
                              QPushButton, QLabel, QGroupBox, QStackedWidget,
                              QFormLayout, QComboBox, QLineEdit, QRadioButton,
                              QMessageBox, QFileDialog, QCheckBox)
 from PyQt6.QtCore import pyqtSignal
 from gui.topology_tab import discover_forcefields, strip_pdb_nonprotein
+from .workflow_context import UmbrellaContext
 import os, shutil
 
+
 class BuildTab(QWidget):
-    """体系构建：PDB 构建 / 导入已有体系"""
-    build_done = pyqtSignal(str)
+    build_done = pyqtSignal(UmbrellaContext)
 
     def __init__(self, main_window):
         super().__init__()
@@ -22,7 +29,6 @@ class BuildTab(QWidget):
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
         w = QWidget(); layout = QVBoxLayout(w)
 
-        # 模式选择
         mg = QGroupBox("体系来源")
         ml = QVBoxLayout(); mh = QHBoxLayout()
         self.rb_build = QRadioButton("从 PDB 构建"); self.rb_import = QRadioButton("导入已有体系 (.gro + topol.top)")
@@ -30,19 +36,16 @@ class BuildTab(QWidget):
         self.rb_build.toggled.connect(self._on_mode); self.rb_import.toggled.connect(self._on_mode)
         mh.addWidget(self.rb_build); mh.addWidget(self.rb_import); mh.addStretch()
         ml.addLayout(mh)
-        ml.addWidget(QLabel("从 PDB 构建：pdb2gmx→solvate→genion\n导入已有体系：直接使用已制备好的 .gro + topol.top"))
+        ml.addWidget(QLabel("从 PDB 构建：pdb2gmx → solvate → genion\n导入已有体系：直接使用已制备好的 .gro + topol.top"))
         mg.setLayout(ml); layout.addWidget(mg)
 
-        # 工作目录
         dg = QGroupBox("工作目录"); dl = QHBoxLayout()
         self.dir_input = QLineEdit(); self.dir_input.setPlaceholderText("选择文件后自动...")
         btn = QPushButton("浏览..."); btn.clicked.connect(self._browse_dir)
         dl.addWidget(self.dir_input); dl.addWidget(btn)
         dg.setLayout(dl); layout.addWidget(dg)
 
-        # 堆叠
         self.stack = QStackedWidget()
-        # build page
         bp = QWidget(); bl = QVBoxLayout(bp); bl.setContentsMargins(0,0,0,0)
         g1 = QGroupBox("1. pdb2gmx"); f1 = QFormLayout()
         fl = QHBoxLayout(); self.pdb_input = QLineEdit(); self.pdb_input.setPlaceholderText("选择 .pdb...")
@@ -66,7 +69,7 @@ class BuildTab(QWidget):
         self.btn_genion = QPushButton("▶ 运行 grompp & genion"); self.btn_genion.clicked.connect(self._run_genion); f3.addRow("", self.btn_genion)
         g3.setLayout(f3); bl.addWidget(g3)
         self.stack.addWidget(bp)
-        # import page
+
         ip = QWidget(); il = QVBoxLayout(ip); il.setContentsMargins(0,0,0,0)
         gi = QGroupBox("导入已有体系"); fi = QFormLayout()
         hg = QHBoxLayout(); self.import_gro = QLineEdit(); self.import_gro.setPlaceholderText("选择 .gro..."); hg.addWidget(self.import_gro); hg.addWidget(QPushButton("浏览...", clicked=self._browse_ig)); fi.addRow("结构 (.gro):", hg)
@@ -80,13 +83,14 @@ class BuildTab(QWidget):
         layout.addStretch()
         scroll.setWidget(w); root.addWidget(scroll)
 
-    # mode / browse / import ──────────────────────
     def _on_mode(self):
         self.mode = "build" if self.rb_build.isChecked() else "import"
         self.stack.setCurrentIndex(0 if self.mode == "build" else 1)
+
     def _browse_dir(self):
         d = QFileDialog.getExistingDirectory(self, "工作目录", self.cwd or os.getcwd())
         if d: self.cwd = d; self.dir_input.setText(d)
+
     def _browse_pdb(self):
         f, _ = QFileDialog.getOpenFileName(self, "PDB", self.cwd or os.getcwd(), "PDB (*.pdb)")
         if f:
@@ -96,12 +100,15 @@ class BuildTab(QWidget):
             if os.path.abspath(f) != os.path.abspath(t): shutil.copy(f, t)
             self.pdb_input.setText(self.pdb_filename)
             self.main_window.log(f"已选择 PDB: {self.pdb_filename} → {self.cwd}")
+
     def _browse_ig(self):
         f, _ = QFileDialog.getOpenFileName(self, ".gro", self.cwd or os.getcwd(), "GRO (*.gro)")
         if f: self.cwd = os.path.dirname(f); self.dir_input.setText(self.cwd); self.import_gro.setText(os.path.basename(f))
+
     def _browse_it(self):
         f, _ = QFileDialog.getOpenFileName(self, "topol.top", self.cwd or os.getcwd(), "TOP (*.top);;All (*)")
         if f: self.cwd = os.path.dirname(f); self.dir_input.setText(self.cwd); self.import_top.setText(os.path.basename(f))
+
     def _confirm_import(self):
         gf = self.import_gro.text(); tf = self.import_top.text()
         if not gf or not tf: QMessageBox.warning(self, "警告", "请选择 .gro 和 topol.top"); return
@@ -110,10 +117,10 @@ class BuildTab(QWidget):
         shutil.copy(gp, os.path.join(self.cwd, "solvated_ions.gro"))
         if os.path.abspath(tp) != os.path.abspath(os.path.join(self.cwd, "topol.top")): shutil.copy(tp, os.path.join(self.cwd, "topol.top"))
         self.main_window.log(f">>> ✓ 导入: {gf} + {tf}")
-        QMessageBox.information(self, "完成", "体系导入成功！请继续到「EM」标签页。")
-        self.build_done.emit(self.cwd)
 
-    # pdb2gmx / solvate / genion ──────────────────
+        ctx = UmbrellaContext(cwd=self.cwd, structure_file="solvated_ions.gro", topology_file="topol.top")
+        self.build_done.emit(ctx)
+
     def _run_pdb2gmx(self):
         if not self.pdb_filename or not self.cwd: return
         p = os.path.join(self.cwd, self.pdb_filename)
@@ -123,20 +130,24 @@ class BuildTab(QWidget):
         args = ["pdb2gmx","-f",self.pdb_filename,"-o","processed.gro","-p","topol.top","-ff",self.ff.currentText(),"-water",self.water.currentText(),"-ter"]
         if self.ignh.isChecked(): args.append("-ignh")
         self._setbtn(False); self._go(args, "1\n0\n", lambda s,m: self._done(s,m,"pdb2gmx"))
+
     def _run_solvate(self):
         self._setbtn(False)
         self._go(["editconf","-f","processed.gro","-o","newbox.gro","-c","-d",self.box_dist.text(),"-bt",self.box_type.currentText()],
                  on_finish=lambda s,m: self._on_ec(s,m))
+
     def _on_ec(self, s, m):
         if not s: self._setbtn(True); QMessageBox.critical(self,"错误",f"editconf: {m}"); return
         self._go(["solvate","-cp","newbox.gro","-cs","spc216.gro","-o","solvated.gro","-p","topol.top"],
                  on_finish=lambda s2,m2: self._done(s2,m2,"solvate"))
+
     def _run_genion(self):
         with open(os.path.join(self.cwd,"ions.mdp"),"w") as f:
             f.write("integrator = steep\nemtol = 1000.0\nemstep = 0.01\nnsteps = 50000\nnstlist = 1\ncutoff-scheme = Verlet\nns_type = grid\ncoulombtype = PME\nrcoulomb = 1.0\nrvdw = 1.0\npbc = xyz\n")
         self._setbtn(False)
         self._go(["grompp","-f","ions.mdp","-c","solvated.gro","-p","topol.top","-o","ions.tpr","-maxwarn","2"],
                  on_finish=lambda s,m: self._on_gi(s,m))
+
     def _on_gi(self, s, m):
         if not s: self._setbtn(True); QMessageBox.critical(self,"错误",f"genion grompp: {m}"); return
         a = ["genion","-s","ions.tpr","-o","solvated_ions.gro","-p","topol.top","-pname",self.pname.text(),"-nname",self.nname.text()]
@@ -149,12 +160,14 @@ class BuildTab(QWidget):
         if success:
             self.main_window.log(f">>> ✓ {name}")
             if name == "genion":
-                self.build_done.emit(self.cwd)
+                ctx = UmbrellaContext(cwd=self.cwd, structure_file="solvated_ions.gro", topology_file="topol.top")
+                self.build_done.emit(ctx)
         else:
             QMessageBox.critical(self,"错误",f"{name}: {message}")
 
     def _setbtn(self, e):
         for b in self.findChildren(QPushButton): b.setEnabled(e)
+
     def _go(self, args, input_text=None, on_finish=None):
         w = self.runner.create_worker(args, cwd=self.cwd, input_text=input_text)
         w.output_signal.connect(self.main_window.log)

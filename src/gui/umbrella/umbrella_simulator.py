@@ -1,90 +1,72 @@
+"""Umbrella Sampling Pipeline 协调器
+
+5 步 Pipeline：构建 → 平衡(EM+NVT+NPT) → Pull → 窗口+批量MD → WHAM
+"""
+
 from PyQt6.QtWidgets import QTabWidget
 from gui.umbrella.build_tab import BuildTab
-from gui.umbrella.em_tab import EmTab
-from gui.umbrella.nvt_tab import NvtTab
-from gui.umbrella.npt_tab import NptTab
+from gui.umbrella.equilibration_tab import EquilibrationTab
 from gui.umbrella.pull_tab import PullTab
 from gui.umbrella.window_tab import WindowTab
 from gui.umbrella.batch_tab import BatchTab
 from gui.umbrella.wham_tab import WhamTab
+from .workflow_context import UmbrellaContext
+
 
 class UmbrellaSimulator(QTabWidget):
-    """伞形取样 Pipeline：构建 → EM → NVT → NPT → Pull → 窗口 → 批量MD → WHAM"""
+    """伞形取样 Pipeline：构建 → 平衡 → Pull → 窗口+批量MD → WHAM"""
 
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
 
-        # 1. 体系构建
         self.build_tab = BuildTab(main_window)
         self.addTab(self.build_tab, "1. 体系构建")
 
-        # 2. EM
-        self.em_tab = EmTab(main_window)
-        self.addTab(self.em_tab, "2. EM")
+        self.eq_tab = EquilibrationTab(main_window)
+        self.addTab(self.eq_tab, "2. 平衡 (EM+NVT+NPT)")
 
-        # 3. NVT
-        self.nvt_tab = NvtTab(main_window)
-        self.addTab(self.nvt_tab, "3. NVT")
-
-        # 4. NPT
-        self.npt_tab = NptTab(main_window)
-        self.addTab(self.npt_tab, "4. NPT")
-
-        # 5. Pull 模拟
         self.pull_tab = PullTab(main_window)
-        self.addTab(self.pull_tab, "5. Pull 模拟")
+        self.addTab(self.pull_tab, "3. Pull 模拟")
 
-        # 6. 窗口设置
         self.window_tab = WindowTab(main_window)
-        self.addTab(self.window_tab, "6. 窗口设置")
+        self.addTab(self.window_tab, "4. 窗口设置")
 
-        # 7. 批量 MD
         self.batch_tab = BatchTab(main_window)
-        self.addTab(self.batch_tab, "7. 批量 MD")
+        self.addTab(self.batch_tab, "5. 批量 MD")
 
-        # 8. WHAM 分析
         self.wham_tab = WhamTab(main_window)
-        self.addTab(self.wham_tab, "8. WHAM 分析")
+        self.addTab(self.wham_tab, "6. WHAM 分析")
 
-        # 信号链
+        # ── 信号链 ──
         self.build_tab.build_done.connect(self._on_build_done)
-        self.em_tab.em_done.connect(self._on_em_done)
-        self.nvt_tab.nvt_done.connect(self._on_nvt_done)
-        self.npt_tab.npt_done.connect(self._on_npt_done)
+        self.eq_tab.eq_done.connect(self._on_eq_done)
         self.pull_tab.pull_done.connect(self._on_pull_done)
         self.window_tab.windows_ready.connect(self._on_windows_ready)
         self.batch_tab.batch_done.connect(self._on_batch_done)
 
-    def _on_build_done(self, cwd):
-        self.em_tab.update_cwd(cwd)
-        self.nvt_tab.update_cwd(cwd)
-        self.npt_tab.update_cwd(cwd)
-        self.pull_tab.update_cwd(cwd)
-        self.window_tab.update_cwd(cwd)
+    def _on_build_done(self, ctx: UmbrellaContext):
+        self.main_window.log(f">>> [Pipeline] 体系构建完成 → {ctx.cwd}")
+        self.eq_tab.update_context(ctx)
         self.setCurrentIndex(1)
 
-    def _on_em_done(self, cwd):
-        self.nvt_tab.update_cwd(cwd)
+    def _on_eq_done(self, ctx: UmbrellaContext):
+        self.main_window.log(">>> [Pipeline] 平衡阶段完成 → Pull")
+        self.pull_tab.update_context(ctx)
         self.setCurrentIndex(2)
 
-    def _on_nvt_done(self, cwd):
-        self.npt_tab.update_cwd(cwd)
+    def _on_pull_done(self, ctx: UmbrellaContext):
+        self.main_window.log(">>> [Pipeline] Pull 完成 → 窗口设置")
+        self.window_tab.update_context(ctx)
         self.setCurrentIndex(3)
 
-    def _on_npt_done(self, cwd):
-        self.pull_tab.update_cwd(cwd)
+    def _on_windows_ready(self, ctx: UmbrellaContext):
+        self.main_window.log(f">>> [Pipeline] {len(ctx.windows)} 个窗口就绪 → 批量 MD")
+        self.batch_tab.update_context(ctx)
+        self.wham_tab.update_context(ctx)
         self.setCurrentIndex(4)
 
-    def _on_pull_done(self, cwd):
-        self.window_tab.update_cwd(cwd)
+    def _on_batch_done(self, ctx: UmbrellaContext):
+        self.main_window.log(">>> [Pipeline] 批量 MD 完成 → WHAM")
+        self.wham_tab.update_context(ctx)
         self.setCurrentIndex(5)
-
-    def _on_windows_ready(self, cwd, windows):
-        self.batch_tab.update_windows(cwd, windows)
-        self.wham_tab.update_data(cwd, windows)
-        self.setCurrentIndex(6)
-
-    def _on_batch_done(self, cwd):
-        self.wham_tab.update_data(cwd, self.window_tab.windows)
-        self.setCurrentIndex(7)
