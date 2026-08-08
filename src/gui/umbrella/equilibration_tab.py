@@ -7,11 +7,14 @@
 """
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
-                             QPushButton, QLabel, QGroupBox, QFormLayout,
+                             QPushButton, QLabel, QFormLayout,
                              QComboBox, QTextEdit, QMessageBox, QDialog,
                              QProgressBar)
 from PyQt6.QtCore import pyqtSignal
 from gui.mdp_editor import MDPEditor
+from gui.i18n import tr, trf
+from gui.theme import set_role
+from gui.widgets import StepCard
 from .workflow_context import UmbrellaContext
 import os
 
@@ -108,14 +111,14 @@ class EquilibrationTab(QWidget):
     def init_ui(self):
         root = QVBoxLayout(self)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        w = QWidget(); layout = QVBoxLayout(w)
+        w = QWidget(); layout = QVBoxLayout(w); layout.setSpacing(10)
 
         # ── 状态+GPU ──
         top_row = QHBoxLayout()
-        self.status_label = QLabel("等待体系构建完成...")
-        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #8a8a8a;")
+        self.status_label = QLabel(tr("等待体系构建完成..."))
+        set_role(self.status_label, "muted")
         top_row.addWidget(self.status_label, stretch=1)
-        top_row.addWidget(QLabel("GPU:"))
+        top_row.addWidget(QLabel(tr("GPU:")))
         self.gpu_combo = QComboBox()
         self.gpu_combo.addItems(["自动检测", "强制使用 GPU", "仅使用 CPU"])
         top_row.addWidget(self.gpu_combo)
@@ -128,8 +131,8 @@ class EquilibrationTab(QWidget):
         layout.addWidget(self.progress)
 
         # ── 1. EM ──
-        g1 = QGroupBox("1. 能量最小化 (EM)")
-        g1l = QVBoxLayout()
+        g1_card = StepCard(1, tr("能量最小化 (EM)"), layout_kind="vbox")
+        g1l = g1_card.content_layout
         mdp1_row = QHBoxLayout()
         self.em_mdp = QTextEdit()
         self.em_mdp.setText(_EM_MDP)
@@ -137,17 +140,20 @@ class EquilibrationTab(QWidget):
         self.em_mdp.setMinimumHeight(130); self.em_mdp.setMaximumHeight(180)
         mdp1_row.addWidget(self.em_mdp, stretch=1)
         btn1_col = QVBoxLayout()
-        btn1_col.addWidget(QPushButton("结构化编辑", clicked=lambda: self._open_editor("em", self.em_mdp)))
-        btn1_col.addWidget(QPushButton("单独运行 EM", clicked=self._run_em_only))
+        btn_edit_em = QPushButton(tr("结构化编辑"), clicked=lambda: self._open_editor("em", self.em_mdp))
+        set_role(btn_edit_em, "primary")
+        btn1_col.addWidget(btn_edit_em)
+        btn_run_em = QPushButton(tr("单独运行 EM"), clicked=self._run_em_only)
+        set_role(btn_run_em, "primary")
+        btn1_col.addWidget(btn_run_em)
         btn1_col.addStretch()
         mdp1_row.addLayout(btn1_col)
         g1l.addLayout(mdp1_row)
-        g1.setLayout(g1l)
-        layout.addWidget(g1)
+        layout.addWidget(g1_card)
 
         # ── 2. NVT ──
-        g2 = QGroupBox("2. NVT 平衡")
-        g2l = QVBoxLayout()
+        g2_card = StepCard(2, tr("NVT 平衡"), layout_kind="vbox")
+        g2l = g2_card.content_layout
         mdp2_row = QHBoxLayout()
         self.nvt_mdp = QTextEdit()
         self.nvt_mdp.setText(_NVT_MDP)
@@ -155,17 +161,20 @@ class EquilibrationTab(QWidget):
         self.nvt_mdp.setMinimumHeight(200); self.nvt_mdp.setMaximumHeight(260)
         mdp2_row.addWidget(self.nvt_mdp, stretch=1)
         btn2_col = QVBoxLayout()
-        btn2_col.addWidget(QPushButton("结构化编辑", clicked=lambda: self._open_editor("nvt", self.nvt_mdp)))
-        btn2_col.addWidget(QPushButton("单独运行 NVT", clicked=self._run_nvt_only))
+        btn_edit_nvt = QPushButton(tr("结构化编辑"), clicked=lambda: self._open_editor("nvt", self.nvt_mdp))
+        set_role(btn_edit_nvt, "primary")
+        btn2_col.addWidget(btn_edit_nvt)
+        btn_run_nvt = QPushButton(tr("单独运行 NVT"), clicked=self._run_nvt_only)
+        set_role(btn_run_nvt, "primary")
+        btn2_col.addWidget(btn_run_nvt)
         btn2_col.addStretch()
         mdp2_row.addLayout(btn2_col)
         g2l.addLayout(mdp2_row)
-        g2.setLayout(g2l)
-        layout.addWidget(g2)
+        layout.addWidget(g2_card)
 
         # ── 3. NPT ──
-        g3 = QGroupBox("3. NPT 平衡")
-        g3l = QVBoxLayout()
+        g3_card = StepCard(3, tr("NPT 平衡"), layout_kind="vbox")
+        g3l = g3_card.content_layout
         mdp3_row = QHBoxLayout()
         self.npt_mdp = QTextEdit()
         self.npt_mdp.setText(_NPT_MDP)
@@ -173,18 +182,21 @@ class EquilibrationTab(QWidget):
         self.npt_mdp.setMinimumHeight(220); self.npt_mdp.setMaximumHeight(280)
         mdp3_row.addWidget(self.npt_mdp, stretch=1)
         btn3_col = QVBoxLayout()
-        btn3_col.addWidget(QPushButton("结构化编辑", clicked=lambda: self._open_editor("npt", self.npt_mdp)))
-        btn3_col.addWidget(QPushButton("单独运行 NPT", clicked=self._run_npt_only))
+        btn_edit_npt = QPushButton(tr("结构化编辑"), clicked=lambda: self._open_editor("npt", self.npt_mdp))
+        set_role(btn_edit_npt, "primary")
+        btn3_col.addWidget(btn_edit_npt)
+        btn_run_npt = QPushButton(tr("单独运行 NPT"), clicked=self._run_npt_only)
+        set_role(btn_run_npt, "primary")
+        btn3_col.addWidget(btn_run_npt)
         btn3_col.addStretch()
         mdp3_row.addLayout(btn3_col)
         g3l.addLayout(mdp3_row)
-        g3.setLayout(g3l)
-        layout.addWidget(g3)
+        layout.addWidget(g3_card)
 
         # ── 主操作按钮 ──
         action_row = QHBoxLayout()
-        self.btn_all = QPushButton("▶ 运行全部平衡阶段 (EM → NVT → NPT)")
-        self.btn_all.setStyleSheet("QPushButton { padding: 10px 20px; font-weight: bold; font-size: 12pt; }")
+        self.btn_all = QPushButton(tr("▶ 运行全部平衡阶段 (EM → NVT → NPT)"))
+        set_role(self.btn_all, "primary")
         self.btn_all.clicked.connect(self._run_all)
         action_row.addWidget(self.btn_all)
         action_row.addStretch()
@@ -197,8 +209,8 @@ class EquilibrationTab(QWidget):
 
     def update_context(self, ctx: UmbrellaContext):
         self.ctx = ctx
-        self.status_label.setText(f"工作目录: {ctx.cwd}  |  输入: {ctx.structure_file}")
-        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #89d185;")
+        self.status_label.setText(trf("工作目录: {dir}  |  输入: {file}", dir=ctx.cwd, file=ctx.structure_file))
+        set_role(self.status_label, "ok")
 
     # ── MDP 编辑 ──
 
@@ -208,49 +220,48 @@ class EquilibrationTab(QWidget):
             text_edit.setText(dlg.get_mdp_content())
 
     def _gpu_args(self):
-        g = self.gpu_combo.currentText()
-        if g == "强制使用 GPU": return ["-nb", "gpu"]
-        elif g == "仅使用 CPU": return ["-nb", "cpu"]
+        if self.gpu_combo.currentIndex() == 1: return ["-nb", "gpu"]
+        elif self.gpu_combo.currentIndex() == 2: return ["-nb", "cpu"]
         return []
 
     # ── 运行全部 ──
 
     def _run_all(self):
         if not self.ctx:
-            QMessageBox.warning(self, "提示", "请先完成体系构建。"); return
+            QMessageBox.warning(self, tr("提示"), tr("请先完成体系构建。")); return
         s = self.ctx.resolve(self.ctx.structure_file)
         t = self.ctx.resolve(self.ctx.topology_file)
         if not os.path.exists(s) or not os.path.exists(t):
-            QMessageBox.warning(self, "提示", "未找到输入结构或拓扑文件。"); return
+            QMessageBox.warning(self, tr("提示"), tr("未找到输入结构或拓扑文件。")); return
 
         self._running = True
         self.btn_all.setEnabled(False)
         self.progress.setVisible(True); self.progress.setValue(0)
-        self.status_label.setText("EM 运行中...")
-        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #d7ba7d;")
+        self.status_label.setText(tr("EM 运行中..."))
+        set_role(self.status_label, "running")
 
         # Step 1: 保存 EM MDP
         try:
             with open(self.ctx.resolve("minim.mdp"), "w") as f:
                 f.write(self.em_mdp.toPlainText())
         except Exception as e:
-            self._on_error(f"保存 minim.mdp 失败: {e}"); return
+            self._on_error(trf("保存 minim.mdp 失败: {err}", err=e)); return
 
         args = ["grompp", "-f", "minim.mdp", "-c", self.ctx.structure_file,
                 "-p", self.ctx.topology_file, "-o", "em.tpr", "-maxwarn", "1"]
         self._start_worker(args, on_finish=lambda s, m: self._on_em_grompp(s, m))
 
     def _on_em_grompp(self, success, message):
-        if not success: self._on_error(f"EM grompp: {message}"); return
-        self.main_window.log(">>> [平衡] EM grompp 完成")
+        if not success: self._on_error(trf("EM grompp: {msg}", msg=message)); return
+        self.main_window.log(tr(">>> [平衡] EM grompp 完成"))
         args = ["mdrun", "-v", "-deffnm", "em"] + self._gpu_args()
         self._start_worker(args, on_finish=lambda s, m: self._on_em_mdrun(s, m))
 
     def _on_em_mdrun(self, success, message):
-        if not success: self._on_error(f"EM mdrun: {message}"); return
-        self.main_window.log(">>> [平衡] EM 完成")
+        if not success: self._on_error(trf("EM mdrun: {msg}", msg=message)); return
+        self.main_window.log(tr(">>> [平衡] EM 完成"))
         self.progress.setValue(1)
-        self.status_label.setText("NVT 运行中...")
+        self.status_label.setText(tr("NVT 运行中..."))
         self._run_nvt()
 
     def _run_nvt(self):
@@ -258,22 +269,22 @@ class EquilibrationTab(QWidget):
             with open(self.ctx.resolve("nvt.mdp"), "w") as f:
                 f.write(self.nvt_mdp.toPlainText())
         except Exception as e:
-            self._on_error(f"保存 nvt.mdp 失败: {e}"); return
+            self._on_error(trf("保存 nvt.mdp 失败: {err}", err=e)); return
         args = ["grompp", "-f", "nvt.mdp", "-c", "em.gro", "-r", "em.gro",
                 "-p", self.ctx.topology_file, "-o", "nvt.tpr", "-maxwarn", "1"]
         self._start_worker(args, on_finish=lambda s, m: self._on_nvt_grompp(s, m))
 
     def _on_nvt_grompp(self, success, message):
-        if not success: self._on_error(f"NVT grompp: {message}"); return
-        self.main_window.log(">>> [平衡] NVT grompp 完成")
+        if not success: self._on_error(trf("NVT grompp: {msg}", msg=message)); return
+        self.main_window.log(tr(">>> [平衡] NVT grompp 完成"))
         args = ["mdrun", "-v", "-deffnm", "nvt"] + self._gpu_args()
         self._start_worker(args, on_finish=lambda s, m: self._on_nvt_mdrun(s, m))
 
     def _on_nvt_mdrun(self, success, message):
-        if not success: self._on_error(f"NVT mdrun: {message}"); return
-        self.main_window.log(">>> [平衡] NVT 完成")
+        if not success: self._on_error(trf("NVT mdrun: {msg}", msg=message)); return
+        self.main_window.log(tr(">>> [平衡] NVT 完成"))
         self.progress.setValue(2)
-        self.status_label.setText("NPT 运行中...")
+        self.status_label.setText(tr("NPT 运行中..."))
         self._run_npt()
 
     def _run_npt(self):
@@ -281,7 +292,7 @@ class EquilibrationTab(QWidget):
             with open(self.ctx.resolve("npt.mdp"), "w") as f:
                 f.write(self.npt_mdp.toPlainText())
         except Exception as e:
-            self._on_error(f"保存 npt.mdp 失败: {e}"); return
+            self._on_error(trf("保存 npt.mdp 失败: {err}", err=e)); return
         args = ["grompp", "-f", "npt.mdp", "-c", "nvt.gro", "-r", "nvt.gro",
                 "-p", self.ctx.topology_file, "-o", "npt.tpr", "-maxwarn", "1"]
         cpt = self.ctx.resolve("nvt.cpt")
@@ -290,20 +301,20 @@ class EquilibrationTab(QWidget):
         self._start_worker(args, on_finish=lambda s, m: self._on_npt_grompp(s, m))
 
     def _on_npt_grompp(self, success, message):
-        if not success: self._on_error(f"NPT grompp: {message}"); return
-        self.main_window.log(">>> [平衡] NPT grompp 完成")
+        if not success: self._on_error(trf("NPT grompp: {msg}", msg=message)); return
+        self.main_window.log(tr(">>> [平衡] NPT grompp 完成"))
         args = ["mdrun", "-v", "-deffnm", "npt"] + self._gpu_args()
         self._start_worker(args, on_finish=lambda s, m: self._on_npt_mdrun(s, m))
 
     def _on_npt_mdrun(self, success, message):
-        if not success: self._on_error(f"NPT mdrun: {message}"); return
-        self.main_window.log(">>> [平衡] NPT 完成")
+        if not success: self._on_error(trf("NPT mdrun: {msg}", msg=message)); return
+        self.main_window.log(tr(">>> [平衡] NPT 完成"))
         self.progress.setValue(3)
         self._running = False
         self.btn_all.setEnabled(True)
-        self.status_label.setText("平衡阶段完成")
-        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #89d185;")
-        QMessageBox.information(self, "完成", "平衡阶段 (EM → NVT → NPT) 完成！\n请继续到「Pull 模拟」。")
+        self.status_label.setText(tr("平衡阶段完成"))
+        set_role(self.status_label, "ok")
+        QMessageBox.information(self, tr("完成"), tr("平衡阶段 (EM → NVT → NPT) 完成！\n请继续到「Pull 模拟」。"))
         self.eq_done.emit(self.ctx)
 
     # ── 单独运行（调试用） ──
@@ -313,7 +324,7 @@ class EquilibrationTab(QWidget):
         s = self.ctx.resolve(self.ctx.structure_file)
         t = self.ctx.resolve(self.ctx.topology_file)
         if not os.path.exists(s) or not os.path.exists(t):
-            QMessageBox.warning(self, "提示", "未找到输入文件。"); return
+            QMessageBox.warning(self, tr("提示"), tr("未找到输入文件。")); return
         with open(self.ctx.resolve("minim.mdp"), "w") as f:
             f.write(self.em_mdp.toPlainText())
         self._start_worker(["grompp", "-f", "minim.mdp", "-c", self.ctx.structure_file,
@@ -321,14 +332,14 @@ class EquilibrationTab(QWidget):
                            on_finish=lambda s, m: (
                                self._start_worker(["mdrun", "-v", "-deffnm", "em"] + self._gpu_args(),
                                                   on_finish=lambda s2, m2:
-                                                  QMessageBox.information(self, "EM", "完成" if s2 else f"失败: {m2}"))
-                               if s else QMessageBox.critical(self, "EM", f"grompp 失败: {m}")))
+                                                  QMessageBox.information(self, "EM", tr("完成") if s2 else trf("失败: {msg}", msg=m2)))
+                               if s else QMessageBox.critical(self, "EM", trf("grompp 失败: {msg}", msg=m))))
 
     def _run_nvt_only(self):
         if not self.ctx: return
         g = self.ctx.resolve("em.gro")
         if not os.path.exists(g):
-            QMessageBox.warning(self, "提示", "未找到 em.gro，请先运行 EM。"); return
+            QMessageBox.warning(self, tr("提示"), tr("未找到 em.gro，请先运行 EM。")); return
         with open(self.ctx.resolve("nvt.mdp"), "w") as f:
             f.write(self.nvt_mdp.toPlainText())
         self._start_worker(["grompp", "-f", "nvt.mdp", "-c", "em.gro", "-r", "em.gro",
@@ -336,14 +347,14 @@ class EquilibrationTab(QWidget):
                            on_finish=lambda s, m: (
                                self._start_worker(["mdrun", "-v", "-deffnm", "nvt"] + self._gpu_args(),
                                                   on_finish=lambda s2, m2:
-                                                  QMessageBox.information(self, "NVT", "完成" if s2 else f"失败: {m2}"))
-                               if s else QMessageBox.critical(self, "NVT", f"grompp 失败: {m}")))
+                                                  QMessageBox.information(self, "NVT", tr("完成") if s2 else trf("失败: {msg}", msg=m2)))
+                               if s else QMessageBox.critical(self, "NVT", trf("grompp 失败: {msg}", msg=m))))
 
     def _run_npt_only(self):
         if not self.ctx: return
         g = self.ctx.resolve("nvt.gro")
         if not os.path.exists(g):
-            QMessageBox.warning(self, "提示", "未找到 nvt.gro，请先运行 NVT。"); return
+            QMessageBox.warning(self, tr("提示"), tr("未找到 nvt.gro，请先运行 NVT。")); return
         with open(self.ctx.resolve("npt.mdp"), "w") as f:
             f.write(self.npt_mdp.toPlainText())
         args = ["grompp", "-f", "npt.mdp", "-c", "nvt.gro", "-r", "nvt.gro",
@@ -355,8 +366,8 @@ class EquilibrationTab(QWidget):
                            on_finish=lambda s, m: (
                                self._start_worker(["mdrun", "-v", "-deffnm", "npt"] + self._gpu_args(),
                                                   on_finish=lambda s2, m2:
-                                                  QMessageBox.information(self, "NPT", "完成" if s2 else f"失败: {m2}"))
-                               if s else QMessageBox.critical(self, "NPT", f"grompp 失败: {m}")))
+                                                  QMessageBox.information(self, "NPT", tr("完成") if s2 else trf("失败: {msg}", msg=m2)))
+                               if s else QMessageBox.critical(self, "NPT", trf("grompp 失败: {msg}", msg=m))))
 
     # ── 错误处理 ──
 
@@ -364,10 +375,10 @@ class EquilibrationTab(QWidget):
         self._running = False
         self.btn_all.setEnabled(True)
         self.progress.setVisible(False)
-        self.status_label.setText("平衡失败")
-        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #f48771;")
-        self.main_window.log(f">>> [平衡] 错误: {msg}")
-        QMessageBox.critical(self, "平衡阶段错误", msg)
+        self.status_label.setText(tr("平衡失败"))
+        set_role(self.status_label, "error")
+        self.main_window.log(trf(">>> [平衡] 错误: {msg}", msg=msg))
+        QMessageBox.critical(self, tr("平衡阶段错误"), msg)
 
     # ── Worker ──
 

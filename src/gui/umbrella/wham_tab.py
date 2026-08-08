@@ -1,9 +1,12 @@
 """Umbrella WHAM Tab —— 汇总窗口数据 → PMF 曲线"""
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
-                             QPushButton, QLabel, QGroupBox,
+                             QPushButton, QLabel,
                              QFormLayout, QLineEdit, QFileDialog,
                              QMessageBox)
+from gui.i18n import tr, trf
+from gui.theme import set_role
+from gui.widgets import StepCard
 from .workflow_context import UmbrellaContext
 import os, shutil
 import matplotlib
@@ -23,29 +26,29 @@ class WhamTab(QWidget):
     def init_ui(self):
         root = QVBoxLayout(self)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        w = QWidget(); layout = QVBoxLayout(w)
+        w = QWidget(); layout = QVBoxLayout(w); layout.setSpacing(10)
 
-        self.status_label = QLabel("等待批量 MD 完成...")
-        self.status_label.setStyleSheet("color: #8a8a8a; font-weight: bold; font-size: 11pt;")
+        self.status_label = QLabel(tr("等待批量 MD 完成..."))
+        set_role(self.status_label, "muted")
         layout.addWidget(self.status_label)
 
-        g1 = QGroupBox("WHAM 参数")
-        f1 = QFormLayout()
+        g1_card = StepCard("", tr("WHAM 参数"))
+        f1 = g1_card.content_layout
         self.temp_input = QLineEdit("300")
-        f1.addRow("温度 (K):", self.temp_input)
+        f1.addRow(tr("温度 (K):"), self.temp_input)
         self.bins_input = QLineEdit("200")
-        f1.addRow("直方图 bins:", self.bins_input)
+        f1.addRow(tr("直方图 bins:"), self.bins_input)
         self.tol_input = QLineEdit("1e-6")
-        f1.addRow("收敛容差:", self.tol_input)
+        f1.addRow(tr("收敛容差:"), self.tol_input)
 
-        self.btn_wham = QPushButton("▶ 运行 WHAM 分析")
+        self.btn_wham = QPushButton(tr("▶ 运行 WHAM 分析"))
         self.btn_wham.clicked.connect(self.run_wham)
+        set_role(self.btn_wham, "primary")
         f1.addRow("", self.btn_wham)
-        g1.setLayout(f1)
-        layout.addWidget(g1)
+        layout.addWidget(g1_card)
 
-        g2 = QGroupBox("PMF 曲线")
-        g2_layout = QVBoxLayout()
+        g2_card = StepCard("", tr("PMF 曲线"), layout_kind="vbox")
+        g2_layout = g2_card.content_layout
         self.canvas = FigureCanvas(Figure(figsize=(6, 4)))
         self.ax = self.canvas.figure.add_subplot(111)
         self.ax.set_xlabel("Reaction Coordinate (nm)")
@@ -54,11 +57,11 @@ class WhamTab(QWidget):
         self.canvas.figure.tight_layout()
         g2_layout.addWidget(self.canvas)
 
-        btn_save = QPushButton("保存 PMF 数据")
+        btn_save = QPushButton(tr("保存 PMF 数据"))
         btn_save.clicked.connect(self.save_pmf)
+        set_role(btn_save, "primary")
         g2_layout.addWidget(btn_save)
-        g2.setLayout(g2_layout)
-        layout.addWidget(g2)
+        layout.addWidget(g2_card)
 
         layout.addStretch()
         scroll.setWidget(w); root.addWidget(scroll)
@@ -66,12 +69,12 @@ class WhamTab(QWidget):
     def update_context(self, ctx: UmbrellaContext):
         self.ctx = ctx
         n = len(ctx.windows) if ctx.windows else 0
-        self.status_label.setText(f"{n} 个窗口 (目录: {ctx.cwd})")
-        self.status_label.setStyleSheet("color: #89d185; font-weight: bold; font-size: 11pt;")
+        self.status_label.setText(trf("{n} 个窗口 (目录: {dir})", n=n, dir=ctx.cwd))
+        set_role(self.status_label, "ok")
 
     def run_wham(self):
         if not self.ctx or not self.ctx.windows:
-            QMessageBox.warning(self, "警告", "请先完成批量 MD")
+            QMessageBox.warning(self, tr("警告"), tr("请先完成批量 MD"))
             return
 
         pullx_files = []
@@ -84,11 +87,12 @@ class WhamTab(QWidget):
                 missing.append(dir_name)
 
         if missing:
-            QMessageBox.warning(self, "警告",
-                f"{len(missing)} 个窗口缺少 pullx.xvg: {', '.join(missing[:5])}...")
+            QMessageBox.warning(self, tr("警告"),
+                trf("{n} 个窗口缺少 pullx.xvg: {missing}...",
+                    n=len(missing), missing=', '.join(missing[:5])))
             return
         if len(pullx_files) < 2:
-            QMessageBox.warning(self, "警告", "至少需要 2 个窗口才能运行 WHAM")
+            QMessageBox.warning(self, tr("警告"), tr("至少需要 2 个窗口才能运行 WHAM"))
             return
 
         files_path = self.ctx.resolve("wham_files.txt")
@@ -123,17 +127,17 @@ class WhamTab(QWidget):
         args.extend(["-ix", files_path])
 
         self.btn_wham.setEnabled(False)
-        self.main_window.log(">>> 运行 WHAM 分析...")
+        self.main_window.log(tr(">>> 运行 WHAM 分析..."))
         self._start_worker(args, on_finish=lambda s, m: self._on_wham_done(s, m))
 
     def _on_wham_done(self, success, message):
         self.btn_wham.setEnabled(True)
         if not success:
-            QMessageBox.critical(self, "错误", f"WHAM 失败:\n{message}")
+            QMessageBox.critical(self, tr("错误"), trf("WHAM 失败:\n{msg}", msg=message))
             return
-        self.main_window.log(">>> WHAM 分析完成")
+        self.main_window.log(tr(">>> WHAM 分析完成"))
         self._plot_pmf()
-        QMessageBox.information(self, "完成", "WHAM 分析完成！PMF 曲线已绘制。")
+        QMessageBox.information(self, tr("完成"), tr("WHAM 分析完成！PMF 曲线已绘制。"))
 
     def _plot_pmf(self):
         pmf_path = self.ctx.resolve("wham_result.xvg")
@@ -157,17 +161,17 @@ class WhamTab(QWidget):
                 self.canvas.figure.tight_layout()
                 self.canvas.draw()
         except Exception as e:
-            self.main_window.log(f"PMF 绘图失败: {e}")
+            self.main_window.log(trf("PMF 绘图失败: {err}", err=e))
 
     def save_pmf(self):
         pmf_path = self.ctx.resolve("wham_result.xvg")
         if not os.path.exists(pmf_path):
-            QMessageBox.warning(self, "警告", "未找到 wham_result.xvg")
+            QMessageBox.warning(self, tr("警告"), tr("未找到 wham_result.xvg"))
             return
-        fname, _ = QFileDialog.getSaveFileName(self, "保存 PMF", pmf_path, "All Files (*)")
+        fname, _ = QFileDialog.getSaveFileName(self, tr("保存 PMF"), pmf_path, "All Files (*)")
         if fname:
             shutil.copy(pmf_path, fname)
-            self.main_window.log(f"PMF 已保存到 {fname}")
+            self.main_window.log(trf("PMF 已保存到 {path}", path=fname))
 
     def _start_worker(self, args, input_text=None, on_finish=None):
         w = self.runner.create_worker(args, cwd=self.ctx.cwd, input_text=input_text)

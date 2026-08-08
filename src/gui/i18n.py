@@ -1,0 +1,662 @@
+"""GROMACS-GUI 国际化（i18n）
+
+- tr(text)     纯文本翻译：中文模式下原样返回；英文模式下查表返回
+- trf(template, **kwargs)   模板翻译 + 格式化（模板占位符用 {name}）
+- set_language/get_language  切换语言（持久化到配置文件）
+- retranslate_tree(root)     遍历控件树重译静态 UI 文本（动态文本不受影响）
+
+约定：
+- 翻译表只收录 UI 标签文本（按钮、标签、组标题、页签、消息框等）。
+- GROMACS 参数值（力场 / 水模型 / 盒子类型 / mdp 选项 / yes-no 等）不参与翻译。
+"""
+
+from core.config import get_setting, save_setting
+
+# 当前语言：zh / en（启动时由 main 按配置覆盖）
+_CURRENT_LANG = "zh"
+
+
+def get_language() -> str:
+    return _CURRENT_LANG
+
+
+def set_language(lang: str) -> None:
+    global _CURRENT_LANG
+    _CURRENT_LANG = lang if lang in ("zh", "en") else "zh"
+    save_setting("language", _CURRENT_LANG)
+
+
+# ═══ 翻译表（zh → en） ═══════════════════════════════════════════════════════
+TRANSLATIONS = {
+    # ── 通用 ──────────────────────────────────────────────────────────────
+    "警告": "Warning",
+    "错误": "Error",
+    "成功": "Success",
+    "完成": "Done",
+    "提示": "Notice",
+    "注意": "Note",
+    "取消": "Cancel",
+    "浏览...": "Browse...",
+    "选择文件": "Select File",
+    "选择工作目录": "Select Working Directory",
+    "保存": "Save",
+    "预览": "Preview",
+
+    # ── 主窗口 / 导航 ─────────────────────────────────────────────────────
+    "01  溶液体系模拟": "01  Solution Simulator",
+    "02  蛋白-配体复合物模拟": "02  Protein–Ligand Complex Simulator",
+    "03  伞形取样自由能计算": "03  Umbrella Sampling Free Energy",
+    "04  聚合物模拟（开发中）": "04  Polymer Simulator (In Development)",
+    "溶液体系模拟": "Solution Simulator",
+    "蛋白-配体复合物模拟": "Protein–Ligand Complex Simulator",
+    "伞形取样自由能计算": "Umbrella Sampling Free Energy",
+    "聚合物模拟（开发中）": "Polymer Simulator (In Development)",
+    "全局运行日志": "Global Run Log",
+    "▼ 收起": "▼ Collapse",
+    "▲ 展开日志": "▲ Expand Log",
+    "▼ 收起日志": "▼ Collapse Log",
+    "展开 / 收起日志面板": "Expand / collapse log panel",
+    "测试 GROMACS 环境": "Test GROMACS Environment",
+    "工作目录: {cwd}": "Working dir: {cwd}",
+    "工作目录: 未设置": "Working dir: not set",
+    "● GROMACS 就绪": "● GROMACS Ready",
+    "○ GROMACS 未配置": "○ GROMACS Not Configured",
+    "未配置": "Not Configured",
+    "GROMACS 路径未设置，请先配置。": "GROMACS path is not set. Please configure it first.",
+    "GROMACS 运行正常！": "GROMACS is running normally!",
+    "GROMACS 运行失败，请检查路径。\n\n{output}": "GROMACS failed. Please check the path.\n\n{output}",
+    "1. 拓扑与水箱": "1. Topology & Solvation",
+    "2. 能量最小化": "2. Energy Minimization",
+    "3. 系统平衡": "3. System Equilibration",
+    "4. 生产模拟": "4. Production MD",
+    "5. 分析与可视化": "5. Analysis & Visualization",
+    "Polymer Simulator 正在开发中...\n\n敬请期待！": "Polymer Simulator is under development...\n\nStay tuned!",
+    "首次配置": "First-time Setup",
+    "未检测到 GROMACS 可执行文件。\n\n请选择 gmx 可执行文件：\n{example}\n\n如已添加到 PATH 环境变量，可在终端中运行 'which gmx' 或 'where gmx' 查看路径。": "No GROMACS executable detected.\n\nPlease select the gmx executable:\n{example}\n\nIf it is already in your PATH, run 'which gmx' or 'where gmx' in a terminal to locate it.",
+    "  Windows 示例: C:\\Gromacs\\bin\\gmx.exe": "  Windows example: C:\\Gromacs\\bin\\gmx.exe",
+    "  Linux 示例: /usr/local/gromacs/bin/gmx": "  Linux example: /usr/local/gromacs/bin/gmx",
+    "选择 GROMACS 可执行文件 (gmx)": "Select GROMACS Executable (gmx)",
+    "GROMACS 可执行文件 (gmx.exe);;所有文件 (*.*)": "GROMACS Executable (gmx.exe);;All Files (*.*)",
+    "所有文件 (*)": "All Files (*)",
+    "[系统] GROMACS 路径已配置: {path}": "[System] GROMACS path configured: {path}",
+    "[系统] 警告：未配置 GROMACS 路径，部分功能不可用。\n       可稍后点击「测试 GROMACS 环境」按钮重新配置。": "[System] Warning: GROMACS path not configured; some features unavailable.\n       Click \"Test GROMACS Environment\" to configure later.",
+    "正在运行: gmx {cmd}": "Running: gmx {cmd}",
+    "\n>>> 正在运行: gmx {cmd}": "\n>>> Running: gmx {cmd}",
+
+    # ── 顶部工具栏 ────────────────────────────────────────────────────────
+    "亮色": "Light",
+    "深色": "Dark",
+    "切换主题（亮 / 暗）": "Toggle theme (light / dark)",
+    "切换界面语言（中文 / English）": "Switch language (中文 / English)",
+    "模拟工作流": "Simulation Workflows",
+    "运行日志": "Run Log",
+    "清空": "Clear",
+    "共 {n} 条": "{n} entries",
+
+    # ── 拓扑与水箱 ────────────────────────────────────────────────────────
+    "0. 设置工作目录": "0. Set Working Directory",
+    "选择输入文件后将自动使用其所在目录": "Auto-uses the input file's directory",
+    "工作目录:": "Working dir:",
+    "1. 基础测试与环境": "1. Basic Test & Environment",
+    "测试 GROMACS 安装 (gmx -version)": "Test GROMACS Installation (gmx -version)",
+    "1. 生成拓扑 (pdb2gmx)": "1. Generate Topology (pdb2gmx)",
+    "选择输入的 .pdb 文件...": "Select input .pdb file...",
+    "输入 PDB:": "Input PDB:",
+    "力场 (-ff):": "Force field (-ff):",
+    "水模型 (-water):": "Water model (-water):",
+    "忽略输入文件中的氢原子 (-ignh)": "Ignore H atoms in input file (-ignh)",
+    "运行 pdb2gmx": "Run pdb2gmx",
+    "2. 定义盒子 (editconf)": "2. Define Box (editconf)",
+    "盒子形状 (-bt):": "Box type (-bt):",
+    "边缘距离 (-d, nm):": "Edge distance (-d, nm):",
+    "运行 editconf": "Run editconf",
+    "3. 添加溶剂 (solvate)": "3. Add Solvent (solvate)",
+    "运行 solvate": "Run solvate",
+    "4. 添加离子中和系统 (genion)": "4. Add Ions & Neutralize (genion)",
+    "阳离子名称 (-pname):": "Cation name (-pname):",
+    "阴离子名称 (-nname):": "Anion name (-nname):",
+    "盐浓度 (-conc, mol/L):": "Salt conc. (-conc, mol/L):",
+    "自动中和系统电荷 (-neutral)": "Auto-neutralize charge (-neutral)",
+    "运行 genion (先 grompp 后 genion)": "Run genion (grompp then genion)",
+    "选择 PDB 文件": "Select PDB File",
+    "PDB Files (*.pdb);;All Files (*)": "PDB Files (*.pdb);;All Files (*)",
+    "已选择输入文件: {file}": "Selected input file: {file}",
+    "工作目录已切换为输入文件所在目录: {dir}": "Working dir switched to input file's dir: {dir}",
+    "在工作目录中未找到文件: {file}": "File not found in working dir: {file}",
+    ">>> 自动清理: 从 PDB 中移除了 {n} 个非蛋白残基（水/离子）": ">>> Auto-cleanup: removed {n} non-protein residues (water/ions) from PDB",
+    "pdb2gmx 运行完成！生成了 processed.gro 和 topol.top": "pdb2gmx finished! Generated processed.gro and topol.top",
+    "pdb2gmx 运行失败: {msg}": "pdb2gmx failed: {msg}",
+    "请先完成 pdb2gmx 步骤或设置工作目录！": "Complete the pdb2gmx step or set the working dir first!",
+    "未找到 processed.gro，请确保上一阶段已成功执行！\n期望路径: {path}": "processed.gro not found. Ensure the previous stage succeeded!\nExpected path: {path}",
+    "editconf 运行完成！生成了 newbox.gro": "editconf finished! Generated newbox.gro",
+    "editconf 运行失败: {msg}": "editconf failed: {msg}",
+    "请先完成上述步骤或设置工作目录！": "Complete the steps above or set the working dir first!",
+    "未找到 newbox.gro 或 topol.top，请确保上一阶段已成功执行！": "newbox.gro or topol.top not found. Ensure the previous stage succeeded!",
+    "[溶剂化] 水模型: {model}, 溶剂模板: {tmpl}": "[Solvation] Water model: {model}, solvent template: {tmpl}",
+    "solvate 运行完成！生成了 solvated.gro": "solvate finished! Generated solvated.gro",
+    "solvate 运行失败: {msg}": "solvate failed: {msg}",
+    "请先完成上述步骤！": "Complete the steps above first!",
+    "创建 ions.mdp 失败: {err}": "Failed to create ions.mdp: {err}",
+    "生成 ions.tpr 失败: {msg}": "Failed to generate ions.tpr: {msg}",
+    "genion 运行完成！生成了 solvated_ions.gro，并已更新拓扑。": "genion finished! Generated solvated_ions.gro and updated topology.",
+    "现在您已经添加了离子，后续的能量最小化请使用 [solvated_ions.gro] 作为输入！": "Ions added. Use [solvated_ions.gro] as input for energy minimization!",
+    "genion 运行失败: {msg}\n可能是找不到 'SOL' 组。": "genion failed: {msg}\nPossibly the 'SOL' group was not found.",
+
+    # ── 能量最小化 / 平衡 / 生产模拟 ──────────────────────────────────────
+    "1. 准备能量最小化参数 (minim.mdp)": "1. Prepare EM Parameters (minim.mdp)",
+    "保存为 minim.mdp": "Save as minim.mdp",
+    "2. 生成运行文件 (grompp)": "2. Generate Run Files (grompp)",
+    "运行 grompp": "Run grompp",
+    "预处理:": "Preprocessing:",
+    "执行预处理:": "Preprocessing:",
+    "3. 执行能量最小化 (mdrun)": "3. Run Energy Minimization (mdrun)",
+    "硬件加速:": "Hardware acceleration:",
+    "自动检测": "Auto Detect",
+    "强制使用 GPU": "Force GPU",
+    "仅使用 CPU": "CPU Only",
+    "运行 mdrun": "Run mdrun",
+    "执行计算:": "Run:",
+    "请先在'拓扑与水箱'步骤中选择文件以确定工作目录！": "Select a file in the 'Topology & Solvation' step to set the working dir!",
+    "已保存 minim.mdp → {dir}": "Saved minim.mdp → {dir}",
+    "minim.mdp 已保存。": "minim.mdp saved.",
+    "保存失败: {err}": "Save failed: {err}",
+    "未找到输入结构文件，请确保已完成之前的步骤。": "Input structure file not found. Ensure previous steps are done.",
+    "缺少必要文件: {file}": "Missing required file: {file}",
+    "grompp 完成！生成了 em.tpr": "grompp finished! Generated em.tpr",
+    "grompp 失败: {msg}": "grompp failed: {msg}",
+    "未找到 em.tpr，请先运行 grompp！": "em.tpr not found. Run grompp first!",
+    "EM 能量最小化完成！": "EM energy minimization complete!",
+    "mdrun (EM) 失败: {msg}": "mdrun (EM) failed: {msg}",
+    "1. 准备生产模拟参数 (md.mdp)": "1. Prepare MD Parameters (md.mdp)",
+    "保存为 md.mdp": "Save as md.mdp",
+    "2. 运行生产模拟 (Production MD)": "2. Run Production MD",
+    "1. grompp (生成 md_0_1.tpr)": "1. grompp (generate md_0_1.tpr)",
+    "2. mdrun (执行生产模拟)": "2. mdrun (run production MD)",
+    "请先在'拓扑与水箱'步骤中确定工作目录！": "Set the working dir in the 'Topology & Solvation' step first!",
+    "已保存 {file} → {dir}": "Saved {file} → {dir}",
+    "{file} 已保存。": "{file} saved.",
+    "grompp 完成！生成了 md_0_1.tpr": "grompp finished! Generated md_0_1.tpr",
+    "grompp (MD) 失败: {msg}": "grompp (MD) failed: {msg}",
+    "生产模拟完成！": "Production MD complete!",
+    "mdrun (MD) 失败: {msg}": "mdrun (MD) failed: {msg}",
+    "NVT 平衡 (恒温)": "NVT Equilibration (constant T)",
+    "NPT 平衡 (恒压)": "NPT Equilibration (constant P)",
+    "1. 准备 NVT 参数 (nvt.mdp)": "1. Prepare NVT Parameters (nvt.mdp)",
+    "保存为 nvt.mdp": "Save as nvt.mdp",
+    "2. 运行 NVT 平衡": "2. Run NVT Equilibration",
+    "1. grompp (生成 nvt.tpr)": "1. grompp (generate nvt.tpr)",
+    "2. mdrun (执行 NVT)": "2. mdrun (run NVT)",
+    "1. 准备 NPT 参数 (npt.mdp)": "1. Prepare NPT Parameters (npt.mdp)",
+    "保存为 npt.mdp": "Save as npt.mdp",
+    "2. 运行 NPT 平衡": "2. Run NPT Equilibration",
+    "1. grompp (生成 npt.tpr)": "1. grompp (generate npt.tpr)",
+    "2. mdrun (执行 NPT)": "2. mdrun (run NPT)",
+    "grompp 完成！生成了 nvt.tpr": "grompp finished! Generated nvt.tpr",
+    "grompp (NVT) 失败: {msg}": "grompp (NVT) failed: {msg}",
+    "NVT 平衡完成！": "NVT equilibration complete!",
+    "mdrun (NVT) 失败: {msg}": "mdrun (NVT) failed: {msg}",
+    "grompp 完成！生成了 npt.tpr": "grompp finished! Generated npt.tpr",
+    "grompp (NPT) 失败: {msg}": "grompp (NPT) failed: {msg}",
+    "NPT 平衡完成！": "NPT equilibration complete!",
+    "mdrun (NPT) 失败: {msg}": "mdrun (NPT) failed: {msg}",
+
+    # ── 分析 ──────────────────────────────────────────────────────────────
+    "1. 轨迹处理 (去除周期性边界条件)": "1. Trajectory Processing (remove PBC)",
+    "输入轨迹 (-f):": "Input trajectory (-f):",
+    "输入 TPR (-s):": "Input TPR (-s):",
+    "输出轨迹 (-o):": "Output trajectory (-o):",
+    "PBC 处理 (-pbc):": "PBC (-pbc):",
+    "居中 (-center):": "Center (-center):",
+    "运行 trjconv": "Run trjconv",
+    "2. 数据分析": "2. Data Analysis",
+    "计算 RMSD (gmx rms)": "Calculate RMSD (gmx rms)",
+    "绘图 RMSD": "Plot RMSD",
+    "计算 RMSF (gmx rmsf)": "Calculate RMSF (gmx rmsf)",
+    "绘图 RMSF": "Plot RMSF",
+    "计算回转半径 (gmx gyrate)": "Calculate Radius of Gyration (gmx gyrate)",
+    "绘图 Gyrate": "Plot Gyrate",
+    "3. 外部可视化工具": "3. External Visualization",
+    "尝试启动 VMD": "Launch VMD",
+    "尝试启动 PyMOL": "Launch PyMOL",
+    "提示: 未检测到 matplotlib，绘图功能不可用。请运行 pip install matplotlib": "Note: matplotlib not found; plotting unavailable. Run pip install matplotlib",
+    "[分析] 未找到 .tpr 文件，无法自动检测索引组，将使用默认编号。": "[Analysis] No .tpr found; cannot auto-detect index groups. Using defaults.",
+    "[分析] 正在检测体系索引组 (基于 {file})...": "[Analysis] Detecting index groups (via {file})...",
+    "[分析] 检测到 {n} 个索引组。": "[Analysis] Detected {n} index groups.",
+    "[分析] 未能解析索引组列表，将使用默认编号。": "[Analysis] Could not parse index groups. Using defaults.",
+    "[分析] 自动匹配组: '{name}' -> #{num}": "[Analysis] Auto-matched group: '{name}' -> #{num}",
+    "[分析] 未找到优选组 {names}，使用默认编号: #{num}": "[Analysis] Preferred groups {names} not found; using default #{num}",
+    "未找到输入轨迹: {file}": "Input trajectory not found: {file}",
+    "轨迹处理完成！输出文件: {file}": "Trajectory processing complete! Output: {file}",
+    "trjconv 失败: {msg}": "trjconv failed: {msg}",
+    "回转半径": "Radius of Gyration",
+    "未找到轨迹文件 ({file})，请先运行模拟或轨迹处理！": "Trajectory file ({file}) not found. Run a simulation or process the trajectory first!",
+    "{desc} 完成！生成了 {file}": "{desc} complete! Generated {file}",
+    "{desc} 失败: {msg}": "{desc} failed: {msg}",
+    "未安装 matplotlib，无法绘图。": "matplotlib not installed; cannot plot.",
+    "未找到数据文件: {file}\n请先运行相应的分析命令。": "Data file not found: {file}\nRun the corresponding analysis first.",
+    "读取文件失败: {err}": "Failed to read file: {err}",
+    "数据文件为空或格式无法解析。": "Data file is empty or unparsable.",
+    "保存图片": "Save Image",
+    "PNG Files (*.png);;PDF Files (*.pdf);;SVG Files (*.svg)": "PNG Files (*.png);;PDF Files (*.pdf);;SVG Files (*.svg)",
+    "已保存图像: {path}": "Image saved: {path}",
+    "图像已保存到:\n{path}": "Image saved to:\n{path}",
+    "保存图像失败: {err}": "Failed to save image: {err}",
+    ">>> 正在启动 {tool}...": ">>> Launching {tool}...",
+    "未找到 {tool} 命令。请确保它已安装并添加到系统 PATH 中。": "{tool} command not found. Ensure it is installed and in the system PATH.",
+    "启动 {tool} 失败: {err}": "Failed to launch {tool}: {err}",
+
+    # ── MDP 面板 / 编辑器 ─────────────────────────────────────────────────
+    "▸ 显示原始 MDP 预览": "▸ Show raw MDP preview",
+    "▾ 隐藏原始 MDP 预览": "▾ Hide raw MDP preview",
+    "运行控制 (Run Control)": "Run Control",
+    "输出控制 (Output Control)": "Output Control",
+    "邻居搜索与相互作用 (Neighbor Searching)": "Neighbor Searching",
+    "静电学 (Electrostatics)": "Electrostatics",
+    "温度耦合 (Temperature Coupling)": "Temperature Coupling",
+    "压力耦合 (Pressure Coupling)": "Pressure Coupling",
+    "键长约束 (Constraints)": "Constraints",
+    "键长约束": "Bond constraints",
+    "续跑设置 (Continuation)": "Continuation",
+    "初始速度生成 (Velocity Generation)": "Velocity Generation",
+    "周期性边界条件 (PBC)": "Periodic Boundary Conditions (PBC)",
+    "周期性边界条件": "Periodic Boundary Conditions",
+    "积分算法：steep/cg 用于能量最小化，md 用于动力学": "Integrator: steep/cg for EM, md for dynamics",
+    "总模拟步数。生产模拟常用 500000 步以上 (1 ns @ dt=2fs)": "Total steps. Production MD usually uses 500k+ steps (1 ns @ dt=2fs)",
+    "时间步长 (ps)。推荐 0.002 (2 fs)，与键长约束搭配": "Time step (ps). Recommended 0.002 (2 fs) with constraints",
+    "能量最小化收敛判据 (kJ/mol/nm)。越小越严格": "EM convergence criterion (kJ/mol/nm). Smaller is stricter",
+    "最小化初始步长 (nm)。过大可能导致震荡": "Initial EM step (nm). Too large may oscillate",
+    "完整坐标轨迹输出频率（步）。0 表示不输出": "Full trajectory output frequency (steps). 0 disables",
+    "压缩轨迹输出频率（步）。分析主要用这个": "Compressed trajectory frequency (steps). Mainly for analysis",
+    "截断方案。Verlet 为推荐方案（GPU 加速友好）": "Cut-off scheme. Verlet is recommended (GPU-friendly)",
+    "静电相互作用算法。PME 为推荐方案": "Electrostatics. PME is recommended",
+    "静电截断半径 (nm)。与 rvdw 保持一致": "Electrostatic cut-off (nm). Keep consistent with rvdw",
+    "范德华截断半径 (nm)": "van der Waals cut-off (nm)",
+    "控温算法。V-rescale 适合平衡，nose-hoover 适合严格 NVT 系综": "Thermostat. V-rescale for equilibration, nose-hoover for strict NVT",
+    "参考温度 (K)。一般设为实验温度如 300": "Reference temperature (K). Usually 300",
+    "控压算法。Parrinello-Rahman 用于生产，berendsen 用于平衡": "Barostat. Parrinello-Rahman for production, berendsen for equilibration",
+    "参考压力 (bar)。通常 1.0": "Reference pressure (bar). Usually 1.0",
+    "键长约束：h-bonds 约束含氢键，all-bonds 约束全部键": "Constraints: h-bonds (H-containing bonds), all-bonds (all)",
+    "续跑模式：yes 表示从先前模拟续跑（不重新生成初速度）": "Continuation: yes resumes a previous run (no new velocities)",
+    "是否生成初始速度。首次运行选 yes，续跑选 no": "Generate initial velocities. yes for first run, no for continuation",
+    "初始速度对应的温度 (K)": "Temperature for initial velocities (K)",
+    "周期性边界条件。xyz 为三维周期（常用）": "PBC. xyz is 3D periodic (common)",
+    "; 以下为 MDP 中保留的其他参数": "; Other parameters preserved from MDP",
+    "MDP 参数配置 - {type}": "MDP Parameters - {type}",
+    "积分算法": "Integrator",
+    "最大步数": "Max steps",
+    "能量最小化容差 (kJ/mol/nm)": "EM tolerance (kJ/mol/nm)",
+    "初始步长 (nm)": "Initial step (nm)",
+    "总步数": "Total steps",
+    "时间步长 (ps)": "Time step (ps)",
+    "坐标输出频率 (步)": "Coordinate output freq. (steps)",
+    "速度输出频率 (步)": "Velocity output freq. (steps)",
+    "力输出频率 (步)": "Force output freq. (steps)",
+    "能量输出频率 (步)": "Energy output freq. (steps)",
+    "日志输出频率 (步)": "Log output freq. (steps)",
+    "压缩坐标输出频率 (步)": "Compressed coord. output freq. (steps)",
+    "压缩坐标组": "Compressed coord. groups",
+    "Cutoff 方案": "Cut-off scheme",
+    "搜索类型": "Search type",
+    "更新频率": "Update frequency",
+    "静电相互作用": "Electrostatics",
+    "静电 Cutoff (nm)": "Electrostatic cut-off (nm)",
+    "范德华 Cutoff (nm)": "van der Waals cut-off (nm)",
+    "控温算法": "Thermostat",
+    "耦合组": "Coupling groups",
+    "耦合时间常数 (ps)": "Coupling time const. (ps)",
+    "参考温度 (K)": "Reference temperature (K)",
+    "控压算法": "Barostat",
+    "耦合类型": "Coupling type",
+    "耦合时间常数 (ps)": "Coupling time const. (ps)",
+    "参考压力 (bar)": "Reference pressure (bar)",
+    "压缩系数": "Compressibility",
+    "其他设置 (Others)": "Other Settings",
+    "是否延续运行": "Continuation",
+    "生成初始速度": "Generate initial velocities",
+    "初始速度温度 (K)": "Initial velocity temperature (K)",
+    "生成 MDP 内容": "Generate MDP Content",
+    "; 以下为原始 MDP 中保留的其他参数": "; Other parameters preserved from original MDP",
+
+    # ── 配体准备 / 复合物 ─────────────────────────────────────────────────
+    "1. 设置工作目录": "1. Set Working Directory",
+    "目录:": "Directory:",
+    "2. 导入配体文件": "2. Import Ligand Files",
+    "请提供外部工具（CGenFF、ATB、LigParGen 等）生成的配体拓扑和结构文件。\n拓扑 (.itp) 和结构 (.gro/.pdb) 必须来自同一来源，以保证原子数一致。\n配体坐标应已处于蛋白结合位点附近的正确参考系中（如来自对接、实验结构等）。": "Provide ligand topology and structure files from external tools (CGenFF, ATB, LigParGen, etc.).\nThe topology (.itp) and structure (.gro/.pdb) must come from the same source so atom counts match.\nLigand coordinates should already be in the correct frame near the protein binding site (e.g., from docking or experimental structures).",
+    "拓扑文件 (.itp):": "Topology (.itp):",
+    "浏览 .itp": "Browse .itp",
+    "结构文件 (.gro/.pdb):": "Structure (.gro/.pdb):",
+    "浏览 .gro/.pdb": "Browse .gro/.pdb",
+    "确认导入": "Confirm Import",
+    "3. 结果预览": "3. Result Preview",
+    "尚未导入配体文件。": "No ligand files imported yet.",
+    "GROMACS Topology (*.itp *.itp)": "GROMACS Topology (*.itp *.itp)",
+    "Structure Files (*.gro *.pdb)": "Structure Files (*.gro *.pdb)",
+    "请同时提供 .itp 和 .gro/.pdb 文件": "Provide both .itp and .gro/.pdb files",
+    "拓扑文件不存在于工作目录中，请重新选择": "Topology file not in working dir. Please reselect.",
+    "结构文件不存在于工作目录中，请重新选择": "Structure file not in working dir. Please reselect.",
+    "✅ 配体文件已就绪！\n拓扑: {itp}\n结构: {gro}\n\n下一步：请在「复合物拓扑与水箱」标签页中选择蛋白 PDB 文件。": "✅ Ligand files ready!\nTopology: {itp}\nStructure: {gro}\n\nNext: select the protein PDB in the \"Complex Topology & Solvation\" tab.",
+    "导入失败: {err}": "Import failed: {err}",
+    "已选择文件: {file}": "Selected file: {file}",
+    "等待配体导入... (请先完成「1. 配体准备」标签页)": "Waiting for ligand import... (finish \"1. Ligand Prep\" tab first)",
+    "1. 选择蛋白 PDB": "1. Select Protein PDB",
+    "选择蛋白 .pdb 文件...": "Select protein .pdb file...",
+    "2. 处理受体蛋白 (pdb2gmx)": "2. Process Receptor (pdb2gmx)",
+    "3. 构建复合物": "3. Build Complex",
+    "合并 protein.gro + ligand.gro，更新 topol.top 加入配体拓扑。\n配体坐标应已处于正确空间位置（来自对接、实验结构等）。": "Merge protein.gro + ligand.gro and update topol.top with ligand topology.\nLigand coordinates should already be correctly placed (from docking, experimental structures, etc.).",
+    "合并生成复合物 (complex.gro & topol.top)": "Merge into complex (complex.gro & topol.top)",
+    "4. 定义盒子与溶剂化": "4. Define Box & Solvate",
+    "运行 editconf & solvate": "Run editconf & solvate",
+    "5. 中和系统电荷 (genion)": "5. Neutralize System (genion)",
+    "将自动运行 grompp 生成 ions.tpr，并使用 genion 替换水分子添加离子。": "Runs grompp to generate ions.tpr, then genion replaces waters with ions.",
+    "中和系统净电荷 (-neutral)": "Neutralize net charge (-neutral)",
+    "运行 grompp & genion": "Run grompp & genion",
+    "✅ 配体: {itp} + {gro} (目录: {dir})": "✅ Ligand: {itp} + {gro} (dir: {dir})",
+    "请先在「1. 配体准备」标签页中导入配体文件！": "Import ligand files in the \"1. Ligand Prep\" tab first!",
+    "选择蛋白 PDB 文件": "Select Protein PDB File",
+    "PDB Files (*.pdb)": "PDB Files (*.pdb)",
+    "请先选择蛋白 PDB 文件。": "Select the protein PDB file first.",
+    "未找到文件: {path}": "File not found: {path}",
+    "pdb2gmx 运行成功，已生成 protein.gro 和 topol.top": "pdb2gmx succeeded. Generated protein.gro and topol.top",
+    "pdb2gmx 失败:\n{msg}": "pdb2gmx failed:\n{msg}",
+    "配体信息缺失！请先完成「1. 配体准备」。": "Ligand info missing! Finish \"1. Ligand Prep\" first.",
+    "未找到 protein.gro 或 topol.top，请先运行 pdb2gmx！": "protein.gro or topol.top not found. Run pdb2gmx first!",
+    "未找到配体结构文件: {file}": "Ligand structure file not found: {file}",
+    "复合物构建成功！\n已生成 complex.gro\n已更新 topol.top (添加了 {name})": "Complex built successfully!\nGenerated complex.gro\nUpdated topol.top (added {name})",
+    "构建复合物时出错: {err}": "Error building complex: {err}",
+    ">>> 运行 editconf: {cmd}": ">>> Running editconf: {cmd}",
+    "editconf 失败:\n{msg}": "editconf failed:\n{msg}",
+    ">>> 运行 solvate: {cmd}": ">>> Running solvate: {cmd}",
+    "已完成定义盒子与溶剂化，生成 complex_solv.gro": "Box defined and solvated. Generated complex_solv.gro",
+    "solvate 失败:\n{msg}": "solvate failed:\n{msg}",
+    ">>> 运行 grompp (为 genion 准备): {cmd}": ">>> Running grompp (for genion): {cmd}",
+    "grompp (ions) 失败:\n{msg}": "grompp (ions) failed:\n{msg}",
+    ">>> 运行 genion: {cmd}": ">>> Running genion: {cmd}",
+    "离子添加成功，生成 complex_solv_ions.gro\n复合物系统准备完毕。": "Ions added. Generated complex_solv_ions.gro\nComplex system is ready.",
+    "genion 失败:\n{msg}": "genion failed:\n{msg}",
+    "1. 配体准备": "1. Ligand Prep",
+    "2. 复合物拓扑与水箱": "2. Complex Topology & Solvation",
+    "3. 能量最小化": "3. Energy Minimization",
+    "4. 系统平衡": "4. System Equilibration",
+    "5. 生产模拟": "5. Production MD",
+    "6. 分析与可视化": "6. Analysis & Visualization",
+
+    # ── 伞形采样 ──────────────────────────────────────────────────────────
+    "1. 体系构建": "1. System Build",
+    "2. 平衡 (EM+NVT+NPT)": "2. Equilibration (EM+NVT+NPT)",
+    "3. Pull 模拟": "3. Pull Simulation",
+    "4. 窗口设置": "4. Window Setup",
+    "5. 批量 MD": "5. Batch MD",
+    "6. WHAM 分析": "6. WHAM Analysis",
+    ">>> [Pipeline] 体系构建完成 → {dir}": ">>> [Pipeline] Build complete → {dir}",
+    ">>> [Pipeline] 平衡阶段完成 → Pull": ">>> [Pipeline] Equilibration done → Pull",
+    ">>> [Pipeline] Pull 完成 → 窗口设置": ">>> [Pipeline] Pull done → Window Setup",
+    ">>> [Pipeline] {n} 个窗口就绪 → 批量 MD": ">>> [Pipeline] {n} windows ready → Batch MD",
+    ">>> [Pipeline] 批量 MD 完成 → WHAM": ">>> [Pipeline] Batch MD done → WHAM",
+    "体系来源": "System Source",
+    "从 PDB 构建": "Build from PDB",
+    "导入已有体系 (.gro + topol.top)": "Import Existing System (.gro + topol.top)",
+    "从 PDB 构建：pdb2gmx → solvate → genion\n导入已有体系：直接使用已制备好的 .gro + topol.top": "From PDB: pdb2gmx → solvate → genion\nImport existing: use prepared .gro + topol.top",
+    "工作目录": "Working Directory",
+    "选择文件后自动...": "Auto after selecting file...",
+    "1. pdb2gmx": "1. pdb2gmx",
+    "选择 .pdb...": "Select .pdb...",
+    "力场:": "Force field:",
+    "水模型:": "Water model:",
+    "忽略输入 H": "Ignore input H",
+    "▶ 运行 pdb2gmx": "▶ Run pdb2gmx",
+    "2. 盒子 & 溶剂化": "2. Box & Solvation",
+    "形状:": "Type:",
+    "距离 (nm):": "Distance (nm):",
+    "▶ 运行 editconf & solvate": "▶ Run editconf & solvate",
+    "3. 添加离子": "3. Add Ions",
+    "盐浓度:": "Salt conc.:",
+    "阳离子:": "Cation:",
+    "阴离子:": "Anion:",
+    "中和净电荷": "Neutralize charge",
+    "▶ 运行 grompp & genion": "▶ Run grompp & genion",
+    "导入已有体系": "Import Existing System",
+    "结构 (.gro):": "Structure (.gro):",
+    "选择 .gro...": "Select .gro...",
+    "拓扑:": "Topology:",
+    "选择 topol.top...": "Select topol.top...",
+    "假设体系已完成溶剂化与离子添加。": "Assumes the system is already solvated and ionized.",
+    "▶ 确认导入": "▶ Confirm Import",
+    "已选择 PDB: {file} → {dir}": "Selected PDB: {file} → {dir}",
+    "请选择 .gro 和 topol.top": "Select .gro and topol.top",
+    "文件不存在": "File does not exist",
+    ">>> ✓ 导入: {gro} + {top}": ">>> ✓ Imported: {gro} + {top}",
+    ">>> 清理: {n} 个非蛋白残基": ">>> Cleaned: {n} non-protein residues",
+    "editconf: {msg}": "editconf: {msg}",
+    "genion grompp: {msg}": "genion grompp: {msg}",
+    "{name}: {msg}": "{name}: {msg}",
+    ">>> ✓ {name}": ">>> ✓ {name}",
+    "等待体系构建完成...": "Waiting for system build...",
+    "GPU:": "GPU:",
+    "2. NVT 平衡": "2. NVT Equilibration",
+    "3. NPT 平衡": "3. NPT Equilibration",
+    "1. 能量最小化 (EM)": "1. Energy Minimization (EM)",
+    "结构化编辑": "Structured Editor",
+    "单独运行 EM": "Run EM only",
+    "单独运行 NVT": "Run NVT only",
+    "单独运行 NPT": "Run NPT only",
+    "▶ 运行全部平衡阶段 (EM → NVT → NPT)": "▶ Run All Equilibration (EM → NVT → NPT)",
+    "工作目录: {dir}  |  输入: {file}": "Working dir: {dir}  |  Input: {file}",
+    "请先完成体系构建。": "Complete the system build first.",
+    "未找到输入结构或拓扑文件。": "Input structure or topology file not found.",
+    "EM 运行中...": "EM running...",
+    "保存 minim.mdp 失败: {err}": "Failed to save minim.mdp: {err}",
+    ">>> [平衡] EM grompp 完成": ">>> [Equil] EM grompp done",
+    ">>> [平衡] EM 完成": ">>> [Equil] EM done",
+    "NVT 运行中...": "NVT running...",
+    "保存 nvt.mdp 失败: {err}": "Failed to save nvt.mdp: {err}",
+    ">>> [平衡] NVT grompp 完成": ">>> [Equil] NVT grompp done",
+    ">>> [平衡] NVT 完成": ">>> [Equil] NVT done",
+    "NPT 运行中...": "NPT running...",
+    "保存 npt.mdp 失败: {err}": "Failed to save npt.mdp: {err}",
+    ">>> [平衡] NPT grompp 完成": ">>> [Equil] NPT grompp done",
+    ">>> [平衡] NPT 完成": ">>> [Equil] NPT done",
+    "平衡阶段完成": "Equilibration complete",
+    "平衡阶段 (EM → NVT → NPT) 完成！\n请继续到「Pull 模拟」。": "Equilibration (EM → NVT → NPT) complete!\nContinue to \"Pull Simulation\".",
+    "未找到输入文件。": "Input files not found.",
+    "未找到 em.gro，请先运行 EM。": "em.gro not found. Run EM first.",
+    "未找到 nvt.gro，请先运行 NVT。": "nvt.gro not found. Run NVT first.",
+    "平衡失败": "Equilibration failed",
+    ">>> [平衡] 错误: {msg}": ">>> [Equil] Error: {msg}",
+    "平衡阶段错误": "Equilibration Error",
+    "失败: {msg}": "Failed: {msg}",
+    "EM grompp: {msg}": "EM grompp: {msg}",
+    "EM mdrun: {msg}": "EM mdrun: {msg}",
+    "NVT grompp: {msg}": "NVT grompp: {msg}",
+    "NVT mdrun: {msg}": "NVT mdrun: {msg}",
+    "NPT grompp: {msg}": "NPT grompp: {msg}",
+    "NPT mdrun: {msg}": "NPT mdrun: {msg}",
+    "Pull 模拟参数": "Pull Simulation Parameters",
+    "组 1 名称:": "Group 1 name:",
+    "组 2 名称:": "Group 2 name:",
+    "坐标几何:": "Geometry:",
+    "pull 方向 (dim=Y/N=Z):": "Pull direction (dim=Y/N=Z):",
+    "拉动速率 (nm/ps):": "Pull rate (nm/ps):",
+    "力常数 k (kJ/mol·nm²):": "Force const. k (kJ/mol·nm²):",
+    "步数 (nsteps):": "Steps (nsteps):",
+    "▶ 执行 Pull 模拟": "▶ Run Pull Simulation",
+    "质心距离 (Pull COM Distance)": "COM Distance (Pull)",
+    "请先完成 NPT。": "Complete NPT first.",
+    "未找到 npt.gro / topol.top，请先完成 NPT": "npt.gro / topol.top not found. Complete NPT first.",
+    "Pull 运行中...": "Pull running...",
+    "Pull grompp 失败": "Pull grompp failed",
+    "Pull grompp 失败:\n{msg}": "Pull grompp failed:\n{msg}",
+    ">>> 开始 Pull 模拟...": ">>> Starting Pull simulation...",
+    "Pull 失败": "Pull failed",
+    "Pull 模拟失败:\n{msg}": "Pull simulation failed:\n{msg}",
+    ">>> Pull 模拟完成": ">>> Pull simulation done",
+    "Pull 完成": "Pull complete",
+    "Pull 模拟完成！已生成 pullx.xvg 和 pullf.xvg。\n请继续到「窗口设置」。": "Pull simulation complete! Generated pullx.xvg and pullf.xvg.\nContinue to \"Window Setup\".",
+    "绘图失败: {err}": "Plot failed: {err}",
+    "等待 Pull 模拟完成...": "Waiting for Pull simulation...",
+    "窗口设置": "Window Setup",
+    "窗口间距 (nm):": "Window spacing (nm):",
+    "窗口数量:": "Window count:",
+    "窗口力常数 k (kJ/mol·nm²):": "Window force const. k (kJ/mol·nm²):",
+    "▶ 从 Pull 轨迹提取窗口": "▶ Extract Windows from Pull Trajectory",
+    "▶ 生成窗口 TPR": "▶ Generate Window TPRs",
+    "窗口列表": "Window List",
+    "未找到 pullx.xvg，请先执行 Pull 模拟": "pullx.xvg not found. Run the Pull simulation first.",
+    "读取 pullx.xvg 失败: {err}": "Failed to read pullx.xvg: {err}",
+    "pullx.xvg 为空": "pullx.xvg is empty",
+    "共 {n} 个窗口, 间距 {spacing} nm": "{n} windows, spacing {spacing} nm",
+    "距离范围: {min} → {max} nm": "Distance range: {min} → {max} nm",
+    ">>> 提取了 {n} 个窗口": ">>> Extracted {n} windows",
+    "请先提取窗口": "Extract windows first.",
+    "未找到 pull.tpr 或 npt.gro": "pull.tpr or npt.gro not found",
+    ">>> 开始生成窗口配置...": ">>> Generating window configs...",
+    ">>> ✓ {n} 个窗口配置已生成": ">>> ✓ Configs generated for {n} windows",
+    "已为 {n} 个窗口生成配置。\n请继续到「批量 MD」。": "Configs generated for {n} windows.\nContinue to \"Batch MD\".",
+    "等待窗口配置完成...": "Waiting for window configs...",
+    "跳过已完成窗口": "Skip completed windows",
+    "▶ 开始批量 MD": "▶ Start Batch MD",
+    "⏹ 停止": "⏹ Stop",
+    "窗口状态": "Window Status",
+    "{n} 个窗口已就绪 (目录: {dir})": "{n} windows ready (dir: {dir})",
+    ">>> 批量 MD 已停止": ">>> Batch MD stopped",
+    ">>> [{i}/{total}] 跳过 {name} (已完成)": ">>> [{i}/{total}] Skipping {name} (done)",
+    ">>> [{i}/{total}] 运行 {name} (ref={ref} nm)": ">>> [{i}/{total}] Running {name} (ref={ref} nm)",
+    "  × grompp 失败: {msg}": "  × grompp failed: {msg}",
+    "  {mark} {name} {status}": "  {mark} {name} {status}",
+    "完成": "Done",
+    ">>> 批量 MD 完成 ({done}/{total} 窗口成功)": ">>> Batch MD complete ({done}/{total} windows OK)",
+    "批量 MD 完成！\n{done}/{total} 窗口成功。\n请继续到「WHAM 分析」。": "Batch MD complete!\n{done}/{total} windows succeeded.\nContinue to \"WHAM Analysis\".",
+    "等待批量 MD 完成...": "Waiting for batch MD...",
+    "WHAM 参数": "WHAM Parameters",
+    "温度 (K):": "Temperature (K):",
+    "直方图 bins:": "Histogram bins:",
+    "收敛容差:": "Convergence tol.:",
+    "▶ 运行 WHAM 分析": "▶ Run WHAM Analysis",
+    "PMF 曲线": "PMF Curve",
+    "保存 PMF 数据": "Save PMF Data",
+    "{n} 个窗口 (目录: {dir})": "{n} windows (dir: {dir})",
+    "请先完成批量 MD": "Complete the batch MD first.",
+    "{n} 个窗口缺少 pullx.xvg: {missing}...": "{n} windows missing pullx.xvg: {missing}...",
+    "至少需要 2 个窗口才能运行 WHAM": "At least 2 windows are required for WHAM.",
+    ">>> 运行 WHAM 分析...": ">>> Running WHAM analysis...",
+    "WHAM 失败:\n{msg}": "WHAM failed:\n{msg}",
+    ">>> WHAM 分析完成": ">>> WHAM analysis done",
+    "WHAM 分析完成！PMF 曲线已绘制。": "WHAM complete! PMF curve plotted.",
+    "PMF 绘图失败: {err}": "PMF plotting failed: {err}",
+    "未找到 wham_result.xvg": "wham_result.xvg not found",
+    "保存 PMF": "Save PMF",
+    "All Files (*)": "All Files (*)",
+    "PMF 已保存到 {path}": "PMF saved to {path}",
+    "等待体系构建...": "Waiting for system build...",
+    "等待 EM 完成...": "Waiting for EM...",
+    "等待 NVT 完成...": "Waiting for NVT...",
+    "✅ 工作目录: {dir}": "✅ Working dir: {dir}",
+    "已保存 minim.mdp": "Saved minim.mdp",
+    "已保存 nvt.mdp": "Saved nvt.mdp",
+    "已保存 npt.mdp": "Saved npt.mdp",
+    "缺少 {file}": "Missing {file}",
+    "grompp: {msg}": "grompp: {msg}",
+    "grompp (NVT): {msg}": "grompp (NVT): {msg}",
+    "grompp (NPT): {msg}": "grompp (NPT): {msg}",
+    ">>> ✓ EM 完成": ">>> ✓ EM done",
+    ">>> ✓ NVT 完成": ">>> ✓ NVT done",
+    ">>> ✓ NPT 完成": ">>> ✓ NPT done",
+    "mdrun (EM): {msg}": "mdrun (EM): {msg}",
+    "mdrun (NVT): {msg}": "mdrun (NVT): {msg}",
+    "mdrun (NPT): {msg}": "mdrun (NPT): {msg}",
+    "运行 NVT 平衡 (mdrun)": "Run NVT Equilibration (mdrun)",
+    "运行 NPT 平衡 (mdrun)": "Run NPT Equilibration (mdrun)",
+    "3. 执行 NVT 平衡 (mdrun)": "3. Run NVT Equilibration (mdrun)",
+    "3. 执行 NPT 平衡 (mdrun)": "3. Run NPT Equilibration (mdrun)",
+    "2. 执行能量最小化 (mdrun)": "2. Run Energy Minimization (mdrun)",
+}
+
+# 反向表（en → zh），用于切换回中文
+REVERSE = {v: k for k, v in TRANSLATIONS.items()}
+
+
+def tr(text: str) -> str:
+    """纯文本翻译。中文模式查反向表；英文模式查正向表；未收录则原样返回。"""
+    if _CURRENT_LANG == "zh":
+        return REVERSE.get(text, text)
+    return TRANSLATIONS.get(text, text)
+
+
+def trf(template: str, **kwargs) -> str:
+    """模板翻译 + 格式化。例：trf("已保存 {file} → {dir}", file=f, dir=d)"""
+    return tr(template).format(**kwargs)
+
+
+# ═══ 运行时重译 ═══════════════════════════════════════════════════════════════
+def retranslate_tree(root) -> None:
+    """遍历控件树，重译静态 UI 文本。
+
+    只处理文本能命中翻译表（中文或英文）的控件；动态文本（路径、数值等）
+    无法命中，自动跳过，不会被破坏。
+    """
+    from PyQt6.QtWidgets import (QLabel, QPushButton, QToolButton, QCheckBox,
+                                 QRadioButton, QGroupBox, QTabWidget,
+                                 QListWidget, QComboBox, QLineEdit, QWidget,
+                                 QListWidgetItem)
+
+    def _retr_text(widget):
+        t = widget.text()
+        nt = tr(t)
+        if nt != t:
+            widget.setText(nt)
+
+    def _retr_group(widget):
+        t = widget.title()
+        nt = tr(t)
+        if nt != t:
+            widget.setTitle(nt)
+
+    def _retr_tabs(widget):
+        for i in range(widget.count()):
+            t = widget.tabText(i)
+            nt = tr(t)
+            if nt != t:
+                widget.setTabText(i, nt)
+
+    def _retr_list(widget):
+        for i in range(widget.count()):
+            item = widget.item(i)
+            if isinstance(item, QListWidgetItem):
+                t = item.text()
+                nt = tr(t)
+                if nt != t:
+                    item.setText(nt)
+                tp = item.toolTip()
+                ntp = tr(tp)
+                if ntp != tp:
+                    item.setToolTip(ntp)
+
+    def _retr_combo(widget):
+        for i in range(widget.count()):
+            t = widget.itemText(i)
+            nt = tr(t)
+            if nt != t:
+                widget.setItemText(i, nt)
+
+    def _retr_tooltip(widget):
+        tp = widget.toolTip()
+        ntp = tr(tp)
+        if ntp != tp:
+            widget.setToolTip(ntp)
+
+    for w in root.findChildren(QWidget):
+        if isinstance(w, (QLabel, QPushButton, QToolButton, QCheckBox, QRadioButton)):
+            _retr_text(w)
+        elif isinstance(w, QGroupBox):
+            _retr_group(w)
+        elif isinstance(w, QTabWidget):
+            _retr_tabs(w)
+        elif isinstance(w, QListWidget):
+            _retr_list(w)
+        elif isinstance(w, QComboBox):
+            _retr_combo(w)
+        if isinstance(w, QLineEdit):
+            ph = w.placeholderText()
+            nph = tr(ph)
+            if nph != ph:
+                w.setPlaceholderText(nph)
+        _retr_tooltip(w)

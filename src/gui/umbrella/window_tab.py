@@ -1,10 +1,13 @@
 """Umbrella Window Tab —— 从 Pull 轨迹提取伞形取样窗口"""
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
-                             QPushButton, QLabel, QGroupBox,
+                             QPushButton, QLabel,
                              QFormLayout, QLineEdit, QTextEdit,
                              QMessageBox)
 from PyQt6.QtCore import pyqtSignal
+from gui.i18n import tr, trf
+from gui.theme import set_role
+from gui.widgets import StepCard
 from .workflow_context import UmbrellaContext
 import os, shutil
 
@@ -22,53 +25,53 @@ class WindowTab(QWidget):
     def init_ui(self):
         root = QVBoxLayout(self)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        w = QWidget(); layout = QVBoxLayout(w)
+        w = QWidget(); layout = QVBoxLayout(w); layout.setSpacing(10)
 
-        self.status_label = QLabel("等待 Pull 模拟完成...")
-        self.status_label.setStyleSheet("color: #8a8a8a; font-weight: bold; font-size: 11pt;")
+        self.status_label = QLabel(tr("等待 Pull 模拟完成..."))
+        set_role(self.status_label, "muted")
         layout.addWidget(self.status_label)
 
-        g1 = QGroupBox("窗口设置")
-        f1 = QFormLayout()
+        g1_card = StepCard("", tr("窗口设置"))
+        f1 = g1_card.content_layout
         self.spacing_input = QLineEdit("0.1")
-        f1.addRow("窗口间距 (nm):", self.spacing_input)
+        f1.addRow(tr("窗口间距 (nm):"), self.spacing_input)
         self.window_count = QLineEdit("20")
-        f1.addRow("窗口数量:", self.window_count)
+        f1.addRow(tr("窗口数量:"), self.window_count)
         self.force_input = QLineEdit("1000")
-        f1.addRow("窗口力常数 k (kJ/mol·nm²):", self.force_input)
+        f1.addRow(tr("窗口力常数 k (kJ/mol·nm²):"), self.force_input)
 
-        self.btn_extract = QPushButton("▶ 从 Pull 轨迹提取窗口")
+        self.btn_extract = QPushButton(tr("▶ 从 Pull 轨迹提取窗口"))
         self.btn_extract.clicked.connect(self.extract_windows)
+        set_role(self.btn_extract, "primary")
         f1.addRow("", self.btn_extract)
-        self.btn_setup = QPushButton("▶ 生成窗口 TPR")
+        self.btn_setup = QPushButton(tr("▶ 生成窗口 TPR"))
         self.btn_setup.clicked.connect(self.setup_windows)
+        set_role(self.btn_setup, "primary")
         f1.addRow("", self.btn_setup)
-        g1.setLayout(f1)
-        layout.addWidget(g1)
+        layout.addWidget(g1_card)
 
-        g2 = QGroupBox("窗口列表")
-        g2_layout = QVBoxLayout()
+        g2_card = StepCard("", tr("窗口列表"), layout_kind="vbox")
+        g2_layout = g2_card.content_layout
         self.window_list = QTextEdit()
         self.window_list.setReadOnly(True)
         self.window_list.setStyleSheet("font-family: Consolas; font-size: 13px;")
         g2_layout.addWidget(self.window_list)
-        g2.setLayout(g2_layout)
-        layout.addWidget(g2)
+        layout.addWidget(g2_card)
 
         layout.addStretch()
         scroll.setWidget(w); root.addWidget(scroll)
 
     def update_context(self, ctx: UmbrellaContext):
         self.ctx = ctx
-        self.status_label.setText(f"工作目录: {ctx.cwd}")
-        self.status_label.setStyleSheet("color: #89d185; font-weight: bold; font-size: 11pt;")
+        self.status_label.setText(trf("工作目录: {cwd}", cwd=ctx.cwd))
+        set_role(self.status_label, "ok")
 
     def extract_windows(self):
         if not self.ctx:
             return
         pullx_path = self.ctx.resolve("pullx.xvg")
         if not os.path.exists(pullx_path):
-            QMessageBox.warning(self, "警告", "未找到 pullx.xvg，请先执行 Pull 模拟")
+            QMessageBox.warning(self, tr("警告"), tr("未找到 pullx.xvg，请先执行 Pull 模拟"))
             return
         try:
             frames = []
@@ -79,10 +82,10 @@ class WindowTab(QWidget):
                     if len(parts) >= 2:
                         frames.append((float(parts[0]), float(parts[1])))
         except Exception as e:
-            QMessageBox.critical(self, "错误", f"读取 pullx.xvg 失败: {e}")
+            QMessageBox.critical(self, tr("错误"), trf("读取 pullx.xvg 失败: {err}", err=e))
             return
         if not frames:
-            QMessageBox.warning(self, "警告", "pullx.xvg 为空")
+            QMessageBox.warning(self, tr("警告"), tr("pullx.xvg 为空"))
             return
 
         min_dist = frames[0][1]; max_dist = frames[-1][1]
@@ -99,26 +102,26 @@ class WindowTab(QWidget):
             self.ctx.windows.append((d, current_ref, dir_name))
             current_ref += spacing
 
-        lines = [f"共 {len(self.ctx.windows)} 个窗口, 间距 {spacing} nm\n",
-                 f"距离范围: {min_dist:.3f} → {max_dist:.3f} nm\n\n"]
+        lines = [trf("共 {n} 个窗口, 间距 {spacing} nm", n=len(self.ctx.windows), spacing=spacing) + "\n",
+                 trf("距离范围: {min} → {max} nm", min=f"{min_dist:.3f}", max=f"{max_dist:.3f}") + "\n\n"]
         for i, (frame_d, ref_d, dn) in enumerate(self.ctx.windows):
             lines.append(f"  [{i:3d}] {dn}  ref={ref_d:.3f} nm  (frame){frame_d:.3f} nm")
         self.window_list.setText('\n'.join(lines))
-        self.main_window.log(f">>> 提取了 {len(self.ctx.windows)} 个窗口")
+        self.main_window.log(trf(">>> 提取了 {n} 个窗口", n=len(self.ctx.windows)))
 
     def setup_windows(self):
         if not self.ctx or not self.ctx.windows:
-            QMessageBox.warning(self, "警告", "请先提取窗口")
+            QMessageBox.warning(self, tr("警告"), tr("请先提取窗口"))
             return
         pull_tpr = self.ctx.resolve("pull.tpr")
         npt_gro = self.ctx.resolve("npt.gro")
         if not os.path.exists(pull_tpr) or not os.path.exists(npt_gro):
-            QMessageBox.warning(self, "警告", "未找到 pull.tpr 或 npt.gro")
+            QMessageBox.warning(self, tr("警告"), tr("未找到 pull.tpr 或 npt.gro"))
             return
 
         force_k = self.force_input.text()
         self.btn_setup.setEnabled(False)
-        self.main_window.log(">>> 开始生成窗口配置...")
+        self.main_window.log(tr(">>> 开始生成窗口配置..."))
 
         for i, (frame_dist, ref_dist, dir_name) in enumerate(self.ctx.windows):
             win_dir = os.path.join(self.ctx.cwd, dir_name)
@@ -158,7 +161,7 @@ class WindowTab(QWidget):
                 shutil.copy(gro_src, os.path.join(win_dir, "npt.gro"))
 
         self.btn_setup.setEnabled(True)
-        self.main_window.log(f">>> ✓ {len(self.ctx.windows)} 个窗口配置已生成")
-        QMessageBox.information(self, "完成",
-            f"已为 {len(self.ctx.windows)} 个窗口生成配置。\n请继续到「批量 MD」。")
+        self.main_window.log(trf(">>> ✓ {n} 个窗口配置已生成", n=len(self.ctx.windows)))
+        QMessageBox.information(self, tr("完成"),
+            trf("已为 {n} 个窗口生成配置。\n请继续到「批量 MD」。", n=len(self.ctx.windows)))
         self.windows_ready.emit(self.ctx)

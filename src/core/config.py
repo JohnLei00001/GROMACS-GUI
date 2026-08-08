@@ -9,6 +9,36 @@ CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 _cached_gmx_path = None
 
 
+def _load_config() -> dict:
+    """读取整个配置文件（不存在时返回空字典）"""
+    try:
+        if os.path.isfile(CONFIG_FILE):
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return data
+    except Exception:
+        pass
+    return {}
+
+
+def get_setting(key: str, default=None):
+    """读取通用设置项（如 theme / language）"""
+    return _load_config().get(key, default)
+
+
+def save_setting(key: str, value) -> None:
+    """保存通用设置项，与其他配置合并写入（不破坏 gmx_path）"""
+    try:
+        data = _load_config()
+        data[key] = value
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        print(f"警告：无法保存配置项 {key}: {e}")
+
+
 def _detect_from_path():
     """从系统 PATH 中自动检测 gmx 可执行文件"""
     # Linux/macOS 上通常是 "gmx"，Windows 上可能是 "gmx.exe"

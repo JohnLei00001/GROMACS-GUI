@@ -1,12 +1,14 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, 
                              QFormLayout, QLabel, QLineEdit, 
-                             QComboBox, QPushButton, QScrollArea, QWidget, QGroupBox)
+                             QComboBox, QPushButton, QScrollArea, QWidget)
 from PyQt6.QtCore import Qt
+from gui.i18n import tr, trf
+from gui.theme import set_role
 
 class MDPEditor(QDialog):
     def __init__(self, parent=None, mdp_type="nvt", current_content=""):
         super().__init__(parent)
-        self.setWindowTitle(f"MDP 参数配置 - {mdp_type.upper()}")
+        self.setWindowTitle(trf("MDP 参数配置 - {type}", type=mdp_type.upper()))
         self.resize(600, 700)
         self.mdp_type = mdp_type
         self.params = {}
@@ -42,73 +44,74 @@ class MDPEditor(QDialog):
         self.form_layout = QFormLayout(content_widget)
         
         # === 1. 运行控制 ===
-        self.add_section_header("运行控制 (Run Control)")
+        self.add_section_header(tr("运行控制 (Run Control)"))
         if self.mdp_type == "em":
-            self.integrator = self.add_combo_param("integrator", ["steep", "cg"], "积分算法")
-            self.nsteps = self.add_line_param("nsteps", "50000", "最大步数")
-            self.emtol = self.add_line_param("emtol", "1000.0", "能量最小化容差 (kJ/mol/nm)")
-            self.emstep = self.add_line_param("emstep", "0.01", "初始步长 (nm)")
+            self.integrator = self.add_combo_param("integrator", ["steep", "cg"], tr("积分算法"))
+            self.nsteps = self.add_line_param("nsteps", "50000", tr("最大步数"))
+            self.emtol = self.add_line_param("emtol", "1000.0", tr("能量最小化容差 (kJ/mol/nm)"))
+            self.emstep = self.add_line_param("emstep", "0.01", tr("初始步长 (nm)"))
         else:
-            self.integrator = self.add_combo_param("integrator", ["md", "steep", "cg"], "积分算法")
-            self.nsteps = self.add_line_param("nsteps", "50000", "总步数")
-            self.dt = self.add_line_param("dt", "0.002", "时间步长 (ps)")
+            self.integrator = self.add_combo_param("integrator", ["md", "steep", "cg"], tr("积分算法"))
+            self.nsteps = self.add_line_param("nsteps", "50000", tr("总步数"))
+            self.dt = self.add_line_param("dt", "0.002", tr("时间步长 (ps)"))
         
         # === 2. 输出控制 ===
-        self.add_section_header("输出控制 (Output Control)")
-        self.nstxout = self.add_line_param("nstxout", "500", "坐标输出频率 (步)")
-        self.nstvout = self.add_line_param("nstvout", "500", "速度输出频率 (步)")
-        self.nstfout = self.add_line_param("nstfout", "0", "力输出频率 (步)")
-        self.nstenergy = self.add_line_param("nstenergy", "500", "能量输出频率 (步)")
-        self.nstlog = self.add_line_param("nstlog", "500", "日志输出频率 (步)")
+        self.add_section_header(tr("输出控制 (Output Control)"))
+        self.nstxout = self.add_line_param("nstxout", "500", tr("坐标输出频率 (步)"))
+        self.nstvout = self.add_line_param("nstvout", "500", tr("速度输出频率 (步)"))
+        self.nstfout = self.add_line_param("nstfout", "0", tr("力输出频率 (步)"))
+        self.nstenergy = self.add_line_param("nstenergy", "500", tr("能量输出频率 (步)"))
+        self.nstlog = self.add_line_param("nstlog", "500", tr("日志输出频率 (步)"))
         
         if self.mdp_type == "md":
-            self.nstxout_compressed = self.add_line_param("nstxout-compressed", "5000", "压缩坐标输出频率 (步)")
-            self.compressed_x_grps = self.add_line_param("compressed-x-grps", "System", "压缩坐标组")
+            self.nstxout_compressed = self.add_line_param("nstxout-compressed", "5000", tr("压缩坐标输出频率 (步)"))
+            self.compressed_x_grps = self.add_line_param("compressed-x-grps", "System", tr("压缩坐标组"))
         
         # === 3. 邻居搜索与相互作用 ===
-        self.add_section_header("邻居搜索与相互作用 (Neighbor Searching)")
-        self.cutoff_scheme = self.add_combo_param("cutoff-scheme", ["Verlet", "group"], "Cutoff 方案")
-        self.ns_type = self.add_combo_param("ns_type", ["grid", "simple"], "搜索类型")
-        self.nstlist = self.add_line_param("nstlist", "10", "更新频率")
-        self.coulombtype = self.add_combo_param("coulombtype", ["PME", "Cut-off", "Reaction-Field"], "静电相互作用")
-        self.rcoulomb = self.add_line_param("rcoulomb", "1.0", "静电 Cutoff (nm)")
-        self.rvdw = self.add_line_param("rvdw", "1.0", "范德华 Cutoff (nm)")
+        self.add_section_header(tr("邻居搜索与相互作用 (Neighbor Searching)"))
+        self.cutoff_scheme = self.add_combo_param("cutoff-scheme", ["Verlet", "group"], tr("Cutoff 方案"))
+        self.ns_type = self.add_combo_param("ns_type", ["grid", "simple"], tr("搜索类型"))
+        self.nstlist = self.add_line_param("nstlist", "10", tr("更新频率"))
+        self.coulombtype = self.add_combo_param("coulombtype", ["PME", "Cut-off", "Reaction-Field"], tr("静电相互作用"))
+        self.rcoulomb = self.add_line_param("rcoulomb", "1.0", tr("静电 Cutoff (nm)"))
+        self.rvdw = self.add_line_param("rvdw", "1.0", tr("范德华 Cutoff (nm)"))
         
         # === 4. 温度耦合 ===
         if self.mdp_type not in ["em"]:
-            self.add_section_header("温度耦合 (Temperature Coupling)")
-            self.tcoupl = self.add_combo_param("tcoupl", ["no", "berendsen", "v-rescale", "nose-hoover"], "控温算法")
-            self.tc_grps = self.add_line_param("tc-grps", "Protein Non-Protein", "耦合组")
-            self.tau_t = self.add_line_param("tau_t", "0.1 0.1", "耦合时间常数 (ps)")
-            self.ref_t = self.add_line_param("ref_t", "300 300", "参考温度 (K)")
+            self.add_section_header(tr("温度耦合 (Temperature Coupling)"))
+            self.tcoupl = self.add_combo_param("tcoupl", ["no", "berendsen", "v-rescale", "nose-hoover"], tr("控温算法"))
+            self.tc_grps = self.add_line_param("tc-grps", "Protein Non-Protein", tr("耦合组"))
+            self.tau_t = self.add_line_param("tau_t", "0.1 0.1", tr("耦合时间常数 (ps)"))
+            self.ref_t = self.add_line_param("ref_t", "300 300", tr("参考温度 (K)"))
         
         # === 5. 压力耦合 (仅 NPT/MD) ===
         if self.mdp_type in ["npt", "md"]:
-            self.add_section_header("压力耦合 (Pressure Coupling)")
-            self.pcoupl = self.add_combo_param("pcoupl", ["no", "berendsen", "parrinello-rahman", "c-rescale"], "控压算法")
-            self.pcoupltype = self.add_combo_param("pcoupltype", ["isotropic", "semiisotropic", "anisotropic"], "耦合类型")
-            self.tau_p = self.add_line_param("tau_p", "2.0", "耦合时间常数 (ps)")
-            self.ref_p = self.add_line_param("ref_p", "1.0", "参考压力 (bar)")
-            self.compressibility = self.add_line_param("compressibility", "4.5e-5", "压缩系数")
+            self.add_section_header(tr("压力耦合 (Pressure Coupling)"))
+            self.pcoupl = self.add_combo_param("pcoupl", ["no", "berendsen", "parrinello-rahman", "c-rescale"], tr("控压算法"))
+            self.pcoupltype = self.add_combo_param("pcoupltype", ["isotropic", "semiisotropic", "anisotropic"], tr("耦合类型"))
+            self.tau_p = self.add_line_param("tau_p", "2.0", tr("耦合时间常数 (ps)"))
+            self.ref_p = self.add_line_param("ref_p", "1.0", tr("参考压力 (bar)"))
+            self.compressibility = self.add_line_param("compressibility", "4.5e-5", tr("压缩系数"))
             
         # === 6. 其他 ===
-        self.add_section_header("其他设置 (Others)")
-        self.pbc = self.add_combo_param("pbc", ["xyz", "no", "xy"], "周期性边界条件")
-        self.constraints = self.add_combo_param("constraints", ["none", "h-bonds", "all-bonds"], "键长约束")
-        self.continuation = self.add_combo_param("continuation", ["yes", "no"], "是否延续运行")
+        self.add_section_header(tr("其他设置 (Others)"))
+        self.pbc = self.add_combo_param("pbc", ["xyz", "no", "xy"], tr("周期性边界条件"))
+        self.constraints = self.add_combo_param("constraints", ["none", "h-bonds", "all-bonds"], tr("键长约束"))
+        self.continuation = self.add_combo_param("continuation", ["yes", "no"], tr("是否延续运行"))
         
         if self.mdp_type == "nvt":
-            self.gen_vel = self.add_combo_param("gen_vel", ["yes", "no"], "生成初始速度")
-            self.gen_temp = self.add_line_param("gen_temp", "300", "初始速度温度 (K)")
+            self.gen_vel = self.add_combo_param("gen_vel", ["yes", "no"], tr("生成初始速度"))
+            self.gen_temp = self.add_line_param("gen_temp", "300", tr("初始速度温度 (K)"))
         
         scroll.setWidget(content_widget)
         main_layout.addWidget(scroll)
         
         # 底部按钮
         btn_layout = QHBoxLayout()
-        btn_save = QPushButton("生成 MDP 内容")
+        btn_save = QPushButton(tr("生成 MDP 内容"))
         btn_save.clicked.connect(self.accept)
-        btn_cancel = QPushButton("取消")
+        set_role(btn_save, "primary")
+        btn_cancel = QPushButton(tr("取消"))
         btn_cancel.clicked.connect(self.reject)
         
         btn_layout.addStretch()
@@ -118,7 +121,7 @@ class MDPEditor(QDialog):
         
     def add_section_header(self, title):
         label = QLabel(title)
-        label.setStyleSheet("font-weight: bold; color: #007acc; margin-top: 10px; margin-bottom: 5px;")
+        set_role(label, "section")
         self.form_layout.addRow(label)
         
     def add_line_param(self, key, default, label_text):

@@ -1,9 +1,11 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
-                             QPushButton, QLabel, QGroupBox, 
-                             QFormLayout, QComboBox, QLineEdit, 
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
+                             QPushButton, QLabel,
+                             QFormLayout, QComboBox, QLineEdit,
                              QMessageBox, QFileDialog, QTabWidget)
 from PyQt6.QtCore import pyqtSignal
 import os
+
+from gui.i18n import tr, trf
 
 from .ligand_prep_tab import LigandPrepTab
 from .complex_tab import ComplexTab
@@ -32,30 +34,27 @@ class LigandSimulator(QWidget):
         
         # 1. 配体准备 (Ligand Prep)
         self.prep_tab = LigandPrepTab(self.main_window)
-        self.tabs.addTab(self.prep_tab, "1. 配体准备")
+        self.tabs.addTab(self.prep_tab, tr("1. 配体准备"))
         
         # 2. 复合物拓扑 (Complex Topology)
         self.complex_tab = ComplexTab(self.main_window)
-        self.tabs.addTab(self.complex_tab, "2. 复合物拓扑与水箱")
+        self.tabs.addTab(self.complex_tab, tr("2. 复合物拓扑与水箱"))
         
         # 连接信号：当配体准备完成时，更新 ComplexTab 的状态
         self.prep_tab.topology_ready.connect(self.complex_tab.update_ligand_info)
         
         # 3. 能量最小化 (EM)
         self.em_tab = EMTab(self.main_window)
-        self.tabs.addTab(self.em_tab, "3. 能量最小化")
+        self.tabs.addTab(self.em_tab, tr("3. 能量最小化"))
         
         # 4. 系统平衡 (EQ)
         self.eq_tab = EQTab(self.main_window)
-        self.tabs.addTab(self.eq_tab, "4. 系统平衡")
-        
+        self.tabs.addTab(self.eq_tab, tr("4. 系统平衡"))
+
         # 5. 生产模拟 (MD)
         self.md_tab = MDTab(self.main_window)
-        self.tabs.addTab(self.md_tab, "5. 生产模拟")
+        self.tabs.addTab(self.md_tab, tr("5. 生产模拟"))
         
         # 6. 分析与可视化
         self.analysis_tab = AnalysisTab(self.main_window)
-        self.tabs.addTab(self.analysis_tab, "6. 分析与可视化")
-
-
-
+        self.tabs.addTab(self.analysis_tab, tr("6. 分析与可视化"))

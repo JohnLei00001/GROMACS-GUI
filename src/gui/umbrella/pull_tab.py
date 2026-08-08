@@ -5,10 +5,13 @@ Pull 参数是伞形取样的核心配置，不做 MDP 折叠（用户需要能�
 """
 
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
-                             QPushButton, QLabel, QGroupBox,
+                             QPushButton, QLabel,
                              QFormLayout, QComboBox, QLineEdit,
                              QMessageBox)
 from PyQt6.QtCore import pyqtSignal
+from gui.i18n import tr, trf
+from gui.theme import set_role
+from gui.widgets import StepCard
 from .workflow_context import UmbrellaContext
 import os
 import matplotlib
@@ -30,40 +33,39 @@ class PullTab(QWidget):
     def init_ui(self):
         root = QVBoxLayout(self)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
-        w = QWidget(); layout = QVBoxLayout(w)
+        w = QWidget(); layout = QVBoxLayout(w); layout.setSpacing(10)
 
-        self.status_label = QLabel("等待体系构建完成...")
-        self.status_label.setStyleSheet("color: #8a8a8a; font-weight: bold; font-size: 11pt;")
+        self.status_label = QLabel(tr("等待体系构建完成..."))
+        set_role(self.status_label, "muted")
         layout.addWidget(self.status_label)
 
-        g1 = QGroupBox("Pull 模拟参数")
-        f1 = QFormLayout()
+        g1_card = StepCard("", tr("Pull 模拟参数"))
+        f1 = g1_card.content_layout
         self.group1_input = QLineEdit("Protein")
-        f1.addRow("组 1 名称:", self.group1_input)
+        f1.addRow(tr("组 1 名称:"), self.group1_input)
         self.group2_input = QLineEdit("Ligand")
-        f1.addRow("组 2 名称:", self.group2_input)
+        f1.addRow(tr("组 2 名称:"), self.group2_input)
         self.geom_combo = QComboBox()
         self.geom_combo.addItems(["distance", "direction", "direction-periodic", "cylinder"])
         self.geom_combo.setCurrentText("distance")
-        f1.addRow("坐标几何:", self.geom_combo)
+        f1.addRow(tr("坐标几何:"), self.geom_combo)
         self.dir_input = QLineEdit("0 0 1")
-        f1.addRow("pull 方向 (dim=Y/N=Z):", self.dir_input)
+        f1.addRow(tr("pull 方向 (dim=Y/N=Z):"), self.dir_input)
         self.rate_input = QLineEdit("0.01")
-        f1.addRow("拉动速率 (nm/ps):", self.rate_input)
+        f1.addRow(tr("拉动速率 (nm/ps):"), self.rate_input)
         self.force_input = QLineEdit("1000")
-        f1.addRow("力常数 k (kJ/mol·nm²):", self.force_input)
+        f1.addRow(tr("力常数 k (kJ/mol·nm²):"), self.force_input)
         self.nsteps_input = QLineEdit("500000")
-        f1.addRow("步数 (nsteps):", self.nsteps_input)
+        f1.addRow(tr("步数 (nsteps):"), self.nsteps_input)
 
-        self.btn_run = QPushButton("▶ 执行 Pull 模拟")
-        self.btn_run.setStyleSheet("QPushButton { padding: 8px 16px; font-weight: bold; }")
+        self.btn_run = QPushButton(tr("▶ 执行 Pull 模拟"))
+        set_role(self.btn_run, "primary")
         self.btn_run.clicked.connect(self.run_pull)
         f1.addRow("", self.btn_run)
-        g1.setLayout(f1)
-        layout.addWidget(g1)
+        layout.addWidget(g1_card)
 
-        g2 = QGroupBox("质心距离 (Pull COM Distance)")
-        g2_layout = QVBoxLayout()
+        g2_card = StepCard("", tr("质心距离 (Pull COM Distance)"), layout_kind="vbox")
+        g2_layout = g2_card.content_layout
         self.canvas = FigureCanvas(Figure(figsize=(6, 3)))
         self.ax = self.canvas.figure.add_subplot(111)
         self.ax.set_xlabel("Time (ps)")
@@ -71,27 +73,26 @@ class PullTab(QWidget):
         self.ax.grid(True, alpha=0.3)
         self.canvas.figure.tight_layout()
         g2_layout.addWidget(self.canvas)
-        g2.setLayout(g2_layout)
-        layout.addWidget(g2)
+        layout.addWidget(g2_card)
 
         layout.addStretch()
         scroll.setWidget(w); root.addWidget(scroll)
 
     def update_context(self, ctx: UmbrellaContext):
         self.ctx = ctx
-        self.status_label.setText(f"工作目录: {ctx.cwd}  |  输入: {ctx.npt_gro}")
-        self.status_label.setStyleSheet("color: #89d185; font-weight: bold; font-size: 11pt;")
+        self.status_label.setText(trf("工作目录: {dir}  |  输入: {file}", dir=ctx.cwd, file=ctx.npt_gro))
+        set_role(self.status_label, "ok")
 
     def run_pull(self):
         if not self.ctx:
-            QMessageBox.warning(self, "提示", "请先完成 NPT。")
+            QMessageBox.warning(self, tr("提示"), tr("请先完成 NPT。"))
             return
 
         npt_gro = self.ctx.resolve(self.ctx.npt_gro)
         top_file = self.ctx.resolve(self.ctx.topology_file)
         if not os.path.exists(npt_gro) or not os.path.exists(top_file):
-            QMessageBox.warning(self, "提示",
-                f"未找到 npt.gro / topol.top，请先完成 NPT")
+            QMessageBox.warning(self, tr("提示"),
+                tr("未找到 npt.gro / topol.top，请先完成 NPT"))
             return
 
         g1 = self.group1_input.text()
@@ -131,8 +132,8 @@ class PullTab(QWidget):
                 f.write("pull-coord1-vec = {}\n".format(direction))
 
         self.btn_run.setEnabled(False)
-        self.status_label.setText("Pull 运行中...")
-        self.status_label.setStyleSheet("color: #d7ba7d; font-weight: bold; font-size: 11pt;")
+        self.status_label.setText(tr("Pull 运行中..."))
+        set_role(self.status_label, "running")
 
         a1 = ["grompp", "-f", "pull.mdp", "-c", self.ctx.npt_gro, "-r", self.ctx.npt_gro,
               "-p", self.ctx.topology_file, "-o", "pull.tpr", "-maxwarn", "2"]
@@ -141,27 +142,27 @@ class PullTab(QWidget):
     def _on_grompp_done(self, success, message):
         if not success:
             self.btn_run.setEnabled(True)
-            self.status_label.setText("Pull grompp 失败")
-            self.status_label.setStyleSheet("color: #f48771; font-weight: bold; font-size: 11pt;")
-            QMessageBox.critical(self, "错误", f"Pull grompp 失败:\n{message}")
+            self.status_label.setText(tr("Pull grompp 失败"))
+            set_role(self.status_label, "error")
+            QMessageBox.critical(self, tr("错误"), trf("Pull grompp 失败:\n{msg}", msg=message))
             return
-        self.main_window.log(">>> 开始 Pull 模拟...")
+        self.main_window.log(tr(">>> 开始 Pull 模拟..."))
         self._start_worker(["mdrun", "-deffnm", "pull", "-v"],
                            on_finish=lambda s, m: self._on_pull_done(s, m))
 
     def _on_pull_done(self, success, message):
         self.btn_run.setEnabled(True)
         if not success:
-            self.status_label.setText("Pull 失败")
-            self.status_label.setStyleSheet("color: #f48771; font-weight: bold; font-size: 11pt;")
-            QMessageBox.critical(self, "错误", f"Pull 模拟失败:\n{message}")
+            self.status_label.setText(tr("Pull 失败"))
+            set_role(self.status_label, "error")
+            QMessageBox.critical(self, tr("错误"), trf("Pull 模拟失败:\n{msg}", msg=message))
             return
-        self.main_window.log(">>> Pull 模拟完成")
-        self.status_label.setText("Pull 完成")
-        self.status_label.setStyleSheet("color: #89d185; font-weight: bold; font-size: 11pt;")
+        self.main_window.log(tr(">>> Pull 模拟完成"))
+        self.status_label.setText(tr("Pull 完成"))
+        set_role(self.status_label, "ok")
         self._plot_pullx()
-        QMessageBox.information(self, "完成",
-            "Pull 模拟完成！已生成 pullx.xvg 和 pullf.xvg。\n请继续到「窗口设置」。")
+        QMessageBox.information(self, tr("完成"),
+            tr("Pull 模拟完成！已生成 pullx.xvg 和 pullf.xvg。\n请继续到「窗口设置」。"))
         self.pull_done.emit(self.ctx)
 
     def _plot_pullx(self):
@@ -186,7 +187,7 @@ class PullTab(QWidget):
                 self.canvas.figure.tight_layout()
                 self.canvas.draw()
         except Exception as e:
-            self.main_window.log(f"绘图失败: {e}")
+            self.main_window.log(trf("绘图失败: {err}", err=e))
 
     def _start_worker(self, args, input_text=None, on_finish=None):
         w = self.runner.create_worker(args, cwd=self.ctx.cwd, input_text=input_text)

@@ -2,6 +2,8 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
                              QPushButton, QLabel, QFormLayout, QFrame,
                              QComboBox, QLineEdit, QTextEdit, QToolButton)
 from PyQt6.QtCore import Qt, pyqtSignal
+from gui.i18n import tr
+from gui.theme import set_role
 import re
 
 # ── default values per section ──────────────────────────────────────────────
@@ -143,10 +145,7 @@ class _CollapsibleSection(QWidget):
         self._btn.setChecked(expanded)
         self._btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self._btn.setAutoRaise(True)
-        self._btn.setStyleSheet(
-            "QToolButton { border: none; background: transparent;"
-            " font-weight: bold; color: #b9b9b9; padding: 2px 2px; text-align: left; }"
-            "QToolButton:hover { color: #ffffff; }")
+        set_role(self._btn, "section")
         self._btn.clicked.connect(self._toggle)
         lay.addWidget(self._btn)
 
@@ -199,7 +198,7 @@ class MDPPanel(QWidget):
         self.form.addStretch()
 
         # raw preview toggle
-        self.btn_toggle_raw = QPushButton("▸ 显示原始 MDP 预览")
+        self.btn_toggle_raw = QPushButton(tr("▸ 显示原始 MDP 预览"))
         self.btn_toggle_raw.clicked.connect(self._toggle_raw)
         self.form.addWidget(self.btn_toggle_raw)
 
@@ -305,10 +304,10 @@ class MDPPanel(QWidget):
         if self._raw_visible:
             self._refresh_raw()
             self.raw_edit.show()
-            self.btn_toggle_raw.setText("▾ 隐藏原始 MDP 预览")
+            self.btn_toggle_raw.setText(tr("▾ 隐藏原始 MDP 预览"))
         else:
             self.raw_edit.hide()
-            self.btn_toggle_raw.setText("▸ 显示原始 MDP 预览")
+            self.btn_toggle_raw.setText(tr("▸ 显示原始 MDP 预览"))
 
     def _refresh_raw(self):
         if self._raw_builtin:
