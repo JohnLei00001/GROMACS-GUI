@@ -214,7 +214,7 @@ class MDPPanel(QWidget):
         keys = _SECTION_KEYS.get(sec_name, [])
         if not keys: return
 
-        title = _SECTION_TITLES.get(sec_name, sec_name)
+        title = tr(_SECTION_TITLES.get(sec_name, sec_name))
         sec = _CollapsibleSection(title, expanded=sec_name in _EXPANDED_DEFAULT)
         fl = sec.layout()
         for key in keys:
@@ -226,6 +226,7 @@ class MDPPanel(QWidget):
             label = QLabel(f"{key}")
             desc = _KEY_DESC.get(key)
             if desc:
+                desc = tr(desc)
                 label.setToolTip(desc)
                 if isinstance(w, (QLineEdit, QComboBox)):
                     w.setToolTip(desc)

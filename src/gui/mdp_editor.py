@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, 
                              QFormLayout, QLabel, QLineEdit, 
-                             QComboBox, QPushButton, QScrollArea, QWidget)
+                             QComboBox, QPushButton, QScrollArea, QWidget, QFrame)
 from PyQt6.QtCore import Qt
 from gui.i18n import tr, trf
 from gui.theme import set_role
@@ -40,6 +40,7 @@ class MDPEditor(QDialog):
         # 创建滚动区域
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
         content_widget = QWidget()
         self.form_layout = QFormLayout(content_widget)
         

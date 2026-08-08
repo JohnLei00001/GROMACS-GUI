@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
+from PyQt6.QtWidgets import (QFrame, QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
                              QPushButton, QLabel, QFormLayout,
                              QComboBox, QMessageBox)
 from PyQt6.QtCore import pyqtSignal
@@ -21,6 +21,7 @@ class EmTab(QWidget):
     def init_ui(self):
         root = QVBoxLayout(self)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
         w = QWidget(); layout = QVBoxLayout(w); layout.setSpacing(10)
 
         self.status = QLabel(tr("等待体系构建..."))
@@ -54,7 +55,7 @@ class EmTab(QWidget):
         mdrun_card = StepCard(3, tr("执行能量最小化 (mdrun)"))
         mdrun_l = mdrun_card.content_layout
         self.gpu_combo = QComboBox()
-        self.gpu_combo.addItems(["自动检测", "强制使用 GPU", "仅使用 CPU"])
+        self.gpu_combo.addItems([tr("自动检测"), tr("强制使用 GPU"), tr("仅使用 CPU")])
         mdrun_l.addRow(tr("硬件加速:"), self.gpu_combo)
         self.btn_mdrun = QPushButton(tr("运行 mdrun"))
         self.btn_mdrun.clicked.connect(self._run_mdrun)

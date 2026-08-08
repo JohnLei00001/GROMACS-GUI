@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QTextEdit,
                              QLabel, QTabWidget, QMessageBox,
                              QStackedWidget, QFileDialog, QSplitter, QToolButton)
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QFont
 import os
 import sys
@@ -26,6 +26,10 @@ from gui.analysis_tab import AnalysisTab
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        # 无边框窗口：去掉系统标题栏，使用自绘应用栏
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
+        # 抗闪烁：让 QSS 背景直接参与绘制，避免首帧显示系统默认背景
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setWindowTitle("GROMACS GUI")
         self.resize(1080, 760)
 
@@ -54,12 +58,18 @@ class MainWindow(QMainWindow):
         self._build_log_panel()
         self._setup_statusbar()
 
-    # ═══ 顶部应用栏 ═══════════════════════════════════════════════════════
+        # 启动时按当前语言统一渲染全部控件（覆盖 GPU 选项等构建期文本）
+        retranslate_tree(self)
+        self._refresh_top_buttons()
+        self._refresh_log_buttons()
+        self._refresh_gmx_status()
+
+    # ═══ 顶部应用栏（自绘标题栏） ════════════════════════════════════════
     def _build_top_bar(self):
-        bar = QWidget()
-        bar.setObjectName("topBar")
-        lay = QHBoxLayout(bar)
-        lay.setContentsMargins(18, 8, 18, 8)
+        self.top_bar = QWidget()
+        self.top_bar.setObjectName("topBar")
+        lay = QHBoxLayout(self.top_bar)
+        lay.setContentsMargins(18, 8, 10, 8)
         lay.setSpacing(10)
 
         title = QLabel("GROMACS GUI")
@@ -84,9 +94,74 @@ class MainWindow(QMainWindow):
         self.btn_lang.clicked.connect(self._toggle_language)
         lay.addWidget(self.btn_lang)
 
-        self.root_layout.insertWidget(0, bar)
+        # ── 窗口控制（自绘标题栏） ──
+        sep = QWidget()
+        sep.setFixedSize(1, 20)
+        sep.setObjectName("topBarSep")
+        lay.addWidget(sep)
+
+        self.btn_min = QToolButton()
+        self.btn_min.setObjectName("winBtn")
+        self.btn_min.setText("─")
+        self.btn_min.setToolTip(tr("最小化"))
+        self.btn_min.clicked.connect(self.showMinimized)
+        lay.addWidget(self.btn_min)
+
+        self.btn_max = QToolButton()
+        self.btn_max.setObjectName("winBtn")
+        self.btn_max.setText("□")
+        self.btn_max.setToolTip(tr("最大化"))
+        self.btn_max.clicked.connect(self._toggle_maximize)
+        lay.addWidget(self.btn_max)
+
+        self.btn_close = QToolButton()
+        self.btn_close.setObjectName("winClose")
+        self.btn_close.setText("✕")
+        self.btn_close.setToolTip(tr("关闭"))
+        self.btn_close.clicked.connect(self.close)
+        lay.addWidget(self.btn_close)
+
+        self.root_layout.insertWidget(0, self.top_bar)
+        self.top_bar.installEventFilter(self)
         self._refresh_top_buttons()
         self._refresh_gmx_status()
+
+    # ── 无边框窗口交互（拖动 / 双击最大化） ───────────────────────────────
+    def eventFilter(self, obj, event):
+        if obj is self.top_bar:
+            if event.type() == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
+                # 只在应用栏空白 / 标题处拖动（避开按钮）
+                child = self.top_bar.childAt(event.position().toPoint())
+                if child is None or isinstance(child, QLabel):
+                    self.windowHandle().startSystemMove()
+                    return True
+            elif event.type() == QEvent.Type.MouseButtonDblClick and event.button() == Qt.MouseButton.LeftButton:
+                child = self.top_bar.childAt(event.position().toPoint())
+                if child is None or isinstance(child, QLabel):
+                    self._toggle_maximize()
+                    return True
+        return super().eventFilter(obj, event)
+
+    def _toggle_maximize(self):
+        if self.isMaximized():
+            self.showNormal()
+        else:
+            self.showMaximized()
+        self._refresh_win_buttons()
+
+    def _refresh_win_buttons(self):
+        if not hasattr(self, "btn_max"):
+            return
+        if self.isMaximized():
+            self.btn_max.setText("❐")
+            self.btn_max.setToolTip(tr("还原"))
+        else:
+            self.btn_max.setText("□")
+            self.btn_max.setToolTip(tr("最大化"))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._refresh_win_buttons()
 
     # ═══ 侧边导航 ═════════════════════════════════════════════════════════
     def _build_sidebar(self):
@@ -96,12 +171,12 @@ class MainWindow(QMainWindow):
 
         self.sidebar.add_section("模拟工作流")
         nav_specs = [
-            ("01", "溶液体系模拟", "ready"),
-            ("02", "蛋白-配体复合物模拟", "ready"),
-            ("03", "伞形取样自由能计算", "ready"),
-            ("04", "聚合物模拟（开发中）", "wip"),
+            ("01", "01  溶液体系模拟", "ready", "溶液体系模拟"),
+            ("02", "02  蛋白-配体复合物模拟", "ready", "蛋白-配体复合物模拟"),
+            ("03", "03  伞形取样自由能计算", "ready", "伞形取样自由能计算"),
+            ("04", "04  聚合物模拟（开发中）", "wip", "聚合物模拟（开发中）"),
         ]
-        self._nav_rows = [self.sidebar.add_item(n, t, s) for n, t, s in nav_specs]
+        self._nav_rows = [self.sidebar.add_item(n, t, s, tip) for n, t, s, tip in nav_specs]
         self.sidebar.currentChanged.connect(self._on_nav_changed)
 
     # ═══ 工作区 ═══════════════════════════════════════════════════════════
@@ -164,11 +239,10 @@ class MainWindow(QMainWindow):
         btn_clear.clicked.connect(self.clear_log)
 
         self.btn_toggle_log = QToolButton()
+        self.btn_toggle_log.setObjectName("topBtn")
         self.btn_toggle_log.setText(tr("▼ 收起"))
         self.btn_toggle_log.setToolTip(tr("展开 / 收起日志面板"))
-        self.btn_toggle_log.setCheckable(True)
-        self.btn_toggle_log.setChecked(True)
-        self.btn_toggle_log.setAutoRaise(True)
+        self.btn_toggle_log.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_toggle_log.clicked.connect(self.toggle_log)
 
         log_header.addWidget(log_title)
@@ -229,6 +303,7 @@ class MainWindow(QMainWindow):
         retranslate_tree(self)
         self._refresh_top_buttons()
         self._refresh_log_buttons()
+        self._refresh_win_buttons()
         self._refresh_gmx_status()
         self._update_status_cwd()
 
@@ -305,7 +380,7 @@ class MainWindow(QMainWindow):
             self._log_visible = True
             self.log_output.setVisible(True)
             self.btn_test.setVisible(True)
-            self.btn_toggle_log.setText(tr("▼ 收起日志"))
+            self.btn_toggle_log.setText(tr("▼ 收起"))
             total = sum(sizes)
             h = max(self._log_last_height, 100)
             self.splitter.setSizes([max(240, total - h), h])
@@ -362,8 +437,17 @@ class MainWindow(QMainWindow):
 
     # ── GROMACS 配置 ──────────────────────────────────────────────────────
     def _ensure_gmx_configured(self):
+        """确保 GROMACS 路径已配置。
+
+        未配置时不阻塞启动、不自动弹窗（弹窗会在窗口显示前闪出），
+        由「测试 GROMACS 环境」按钮触发配置流程，状态徽章已提示未配置。
+        """
         if not self.runner.is_ready():
-            self._configure_gmx_path()
+            # 延迟到事件循环启动后再提示，避免启动闪窗
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(300, lambda: self.log(
+                tr("[系统] 未检测到 GROMACS，可点击「测试 GROMACS 环境」配置路径。")))
+            return
 
     def _configure_gmx_path(self):
         is_windows = platform.system() == "Windows"

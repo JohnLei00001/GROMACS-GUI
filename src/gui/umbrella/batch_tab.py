@@ -1,6 +1,6 @@
 """Umbrella Batch Tab —— 批量执行伞形窗口 MD"""
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
+from PyQt6.QtWidgets import (QFrame, QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
                              QPushButton, QLabel,
                              QProgressBar, QListWidget, QListWidgetItem,
                              QMessageBox, QCheckBox)
@@ -27,6 +27,7 @@ class BatchTab(QWidget):
     def init_ui(self):
         root = QVBoxLayout(self)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
         w = QWidget(); layout = QVBoxLayout(w); layout.setSpacing(10)
 
         self.status_label = QLabel(tr("等待窗口配置完成..."))

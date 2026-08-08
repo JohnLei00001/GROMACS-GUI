@@ -50,7 +50,7 @@ class EMTab(QWidget):
         mdrun_card = StepCard(3, tr("执行能量最小化 (mdrun)"), layout_kind="form")
         mdrun_l = mdrun_card.content_layout
         self.gpu_check = QComboBox()
-        self.gpu_check.addItems(["自动检测", "强制使用 GPU", "仅使用 CPU"])
+        self.gpu_check.addItems([tr("自动检测"), tr("强制使用 GPU"), tr("仅使用 CPU")])
         mdrun_l.addRow(tr("硬件加速:"), self.gpu_check)
         btn_run_mdrun = QPushButton(tr("运行 mdrun"))
         btn_run_mdrun.clicked.connect(self.run_mdrun)

@@ -1,6 +1,6 @@
 """Umbrella Window Tab —— 从 Pull 轨迹提取伞形取样窗口"""
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
+from PyQt6.QtWidgets import (QFrame, QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
                              QPushButton, QLabel,
                              QFormLayout, QLineEdit, QTextEdit,
                              QMessageBox)
@@ -25,6 +25,7 @@ class WindowTab(QWidget):
     def init_ui(self):
         root = QVBoxLayout(self)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
         w = QWidget(); layout = QVBoxLayout(w); layout.setSpacing(10)
 
         self.status_label = QLabel(tr("等待 Pull 模拟完成..."))

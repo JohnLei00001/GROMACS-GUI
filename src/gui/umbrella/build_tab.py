@@ -4,7 +4,7 @@
 - 构建完成后创建 UmbrellaContext，携带明确的 structure_file 和 topology_file
 """
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
+from PyQt6.QtWidgets import (QFrame, QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
                              QPushButton, QLabel, QStackedWidget,
                              QFormLayout, QComboBox, QLineEdit, QRadioButton,
                              QMessageBox, QFileDialog, QCheckBox)
@@ -30,6 +30,7 @@ class BuildTab(QWidget):
     def init_ui(self):
         root = QVBoxLayout(self)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
         w = QWidget(); layout = QVBoxLayout(w); layout.setSpacing(10)
 
         mg_card = StepCard("", tr("体系来源"), layout_kind="vbox")

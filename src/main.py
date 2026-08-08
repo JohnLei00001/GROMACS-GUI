@@ -26,6 +26,8 @@ def main():
     apply_theme(app)
 
     window = MainWindow()
+    # 先完成首轮布局与样式应用，避免无边框窗口显示时空帧闪烁
+    app.processEvents()
     window.show()
     sys.exit(app.exec())
 

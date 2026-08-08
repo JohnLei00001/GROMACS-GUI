@@ -169,6 +169,19 @@ QWidget {{
     font-size: {UI_FONT_SIZE}px;
 }}
 
+/* ═══ 无边框容器（滚动区 / 堆叠区，消除多余黑框） ═══ */
+QScrollArea {{
+    border: none;
+    background: transparent;
+}}
+QScrollArea > QWidget > QWidget {{
+    background: transparent;
+}}
+QStackedWidget {{
+    border: none;
+    background: transparent;
+}}
+
 /* ═══ 顶部应用栏（#topBar） ═══ */
 QWidget#topBar {{
     background-color: {C["bg"]};
@@ -195,6 +208,26 @@ QToolButton#topBtn:hover {{
 }}
 QToolButton#topBtn:pressed {{
     background-color: {C["bg_selected"]};
+}}
+/* 自绘标题栏窗口控制 */
+QWidget#topBarSep {{
+    background-color: {C["border"]};
+}}
+QToolButton#winBtn, QToolButton#winClose {{
+    background: transparent;
+    color: {C["fg_muted"]};
+    border: none;
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 13px;
+}}
+QToolButton#winBtn:hover {{
+    background-color: {C["bg_hover"]};
+    color: {C["fg"]};
+}}
+QToolButton#winClose:hover {{
+    background-color: {C["error"]};
+    color: #ffffff;
 }}
 
 /* ═══ 侧边导航（#sidebar） ═══ */
@@ -605,15 +638,33 @@ QListWidget::item:selected {{
 
 def apply_theme(app) -> None:
     """应用当前模式的设计系统：默认字体 + QSS + matplotlib 适配"""
+    from PyQt6.QtGui import QColor, QPalette
+
     # 1. 默认字体（中英文混排走 Segoe UI + 系统 fallback）
     f = QFont("Segoe UI", APP_FONT_SIZE)
     f.setStyleHint(QFont.StyleHint.SansSerif)
     app.setFont(f)
 
-    # 2. 全局样式表（随当前模式）
+    # 2. 应用级调色板：确保无边框窗口首帧即为主题背景，避免启动白闪
+    C = palette(CURRENT_MODE)
+    pal = QPalette()
+    pal.setColor(QPalette.ColorRole.Window, QColor(C["bg"]))
+    pal.setColor(QPalette.ColorRole.WindowText, QColor(C["fg"]))
+    pal.setColor(QPalette.ColorRole.Base, QColor(C["bg_input"]))
+    pal.setColor(QPalette.ColorRole.AlternateBase, QColor(C["bg_muted"]))
+    pal.setColor(QPalette.ColorRole.Text, QColor(C["fg"]))
+    pal.setColor(QPalette.ColorRole.Button, QColor(C["bg_panel"]))
+    pal.setColor(QPalette.ColorRole.ButtonText, QColor(C["fg"]))
+    pal.setColor(QPalette.ColorRole.ToolTipBase, QColor(C["bg_panel"]))
+    pal.setColor(QPalette.ColorRole.ToolTipText, QColor(C["fg"]))
+    pal.setColor(QPalette.ColorRole.Highlight, QColor(C["primary"]))
+    pal.setColor(QPalette.ColorRole.HighlightedText, QColor(C["fg_on_primary"]))
+    app.setPalette(pal)
+
+    # 3. 全局样式表（随当前模式）
     app.setStyleSheet(build_qss(CURRENT_MODE))
 
-    # 3. matplotlib 配色适配（若已安装）
+    # 4. matplotlib 配色适配（若已安装）
     _apply_matplotlib(CURRENT_MODE)
 
 

@@ -112,9 +112,11 @@ class SidebarItem(QToolButton):
         super().__init__(parent)
         self.setObjectName("navItem")
         self.setCheckable(True)
+        self.setAutoExclusive(True)
         self.setAutoRaise(True)
         self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self.setText(f"{index}  {title}")
+        # title 为完整显示文本（含序号），已由调用方完成 tr
+        self.setText(title)
         self.setProperty("navStatus", status)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -141,9 +143,15 @@ class AppSidebar(QWidget):
         lbl.setObjectName("navSection")
         self._v.insertWidget(max(0, self._v.count() - 1), lbl)
 
-    def add_item(self, index: str, title: str, status: str = "idle") -> int:
-        """添加模块项，返回其行号（用于 setCurrentRow）"""
+    def add_item(self, index: str, title: str, status: str = "idle",
+                 tooltip: str = "") -> int:
+        """添加模块项，返回其行号（用于 setCurrentRow）。
+
+        title 为短显示名（双语自动翻译），tooltip 为完整描述。
+        """
         item = SidebarItem(index, tr(title), status)
+        if tooltip:
+            item.setToolTip(tr(tooltip))
         row = len(self._items)
         self._items.append(item)
         # 插到 stretch 之前

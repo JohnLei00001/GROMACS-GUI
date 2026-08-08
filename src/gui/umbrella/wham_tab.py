@@ -1,6 +1,6 @@
 """Umbrella WHAM Tab —— 汇总窗口数据 → PMF 曲线"""
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
+from PyQt6.QtWidgets import (QFrame, QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
                              QPushButton, QLabel,
                              QFormLayout, QLineEdit, QFileDialog,
                              QMessageBox)
@@ -26,6 +26,7 @@ class WhamTab(QWidget):
     def init_ui(self):
         root = QVBoxLayout(self)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
         w = QWidget(); layout = QVBoxLayout(w); layout.setSpacing(10)
 
         self.status_label = QLabel(tr("等待批量 MD 完成..."))

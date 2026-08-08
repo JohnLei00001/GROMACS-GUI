@@ -44,7 +44,7 @@ class MDTab(QWidget):
         btn_grompp.clicked.connect(self._run_grompp)
         set_role(btn_grompp, "primary")
         self.gpu_combo = QComboBox()
-        self.gpu_combo.addItems(["自动检测", "强制使用 GPU", "仅使用 CPU"])
+        self.gpu_combo.addItems([tr("自动检测"), tr("强制使用 GPU"), tr("仅使用 CPU")])
         btn_mdrun = QPushButton(tr("2. mdrun (执行生产模拟)"))
         btn_mdrun.clicked.connect(self._run_mdrun)
         set_role(btn_mdrun, "primary")

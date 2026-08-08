@@ -6,7 +6,7 @@
 - 同时保留各步独立运行能力用于调试
 """
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
+from PyQt6.QtWidgets import (QFrame, QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
                              QPushButton, QLabel, QFormLayout,
                              QComboBox, QTextEdit, QMessageBox, QDialog,
                              QProgressBar)
@@ -111,6 +111,7 @@ class EquilibrationTab(QWidget):
     def init_ui(self):
         root = QVBoxLayout(self)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
         w = QWidget(); layout = QVBoxLayout(w); layout.setSpacing(10)
 
         # ── 状态+GPU ──
@@ -120,7 +121,7 @@ class EquilibrationTab(QWidget):
         top_row.addWidget(self.status_label, stretch=1)
         top_row.addWidget(QLabel(tr("GPU:")))
         self.gpu_combo = QComboBox()
-        self.gpu_combo.addItems(["自动检测", "强制使用 GPU", "仅使用 CPU"])
+        self.gpu_combo.addItems([tr("自动检测"), tr("强制使用 GPU"), tr("仅使用 CPU")])
         top_row.addWidget(self.gpu_combo)
         layout.addLayout(top_row)
 

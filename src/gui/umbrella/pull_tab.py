@@ -4,7 +4,7 @@ Pull 参数是伞形取样的核心配置，不做 MDP 折叠（用户需要能�
 输入/输出路径通过 WorkflowContext 传递，不再硬编码猜测。
 """
 
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
+from PyQt6.QtWidgets import (QFrame, QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
                              QPushButton, QLabel,
                              QFormLayout, QComboBox, QLineEdit,
                              QMessageBox)
@@ -33,6 +33,7 @@ class PullTab(QWidget):
     def init_ui(self):
         root = QVBoxLayout(self)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
         w = QWidget(); layout = QVBoxLayout(w); layout.setSpacing(10)
 
         self.status_label = QLabel(tr("等待体系构建完成..."))
