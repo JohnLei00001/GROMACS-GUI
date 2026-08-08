@@ -21,7 +21,7 @@ class EmTab(QWidget):
         w = QWidget(); layout = QVBoxLayout(w)
 
         self.status = QLabel("等待体系构建...")
-        self.status.setStyleSheet("color: red; font-weight: bold;")
+        self.status.setStyleSheet("color: #f48771; font-weight: bold;")
         layout.addWidget(self.status)
 
         # 1. MDP
@@ -65,7 +65,7 @@ class EmTab(QWidget):
     def update_cwd(self, cwd):
         self.cwd = cwd
         self.status.setText(f"✅ 工作目录: {cwd}")
-        self.status.setStyleSheet("color: green; font-weight: bold;")
+        self.status.setStyleSheet("color: #89d185; font-weight: bold;")
 
     def _save_mdp(self):
         if not self.cwd: return

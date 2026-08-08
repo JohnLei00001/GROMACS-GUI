@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QPushButton, QTextEdit, 
-                             QLabel, QTabWidget, QMessageBox, QListWidget, 
-                             QStackedWidget, QFileDialog, QSplitter)
+                             QLabel, QTabWidget, QMessageBox, QListWidget, QListWidgetItem,
+                             QStackedWidget, QFileDialog, QSplitter, QToolButton)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 import os
@@ -37,39 +37,24 @@ class MainWindow(QMainWindow):
         
         # === 左侧导航栏 ===
         self.nav_list = QListWidget()
-        self.nav_list.setFixedWidth(200)
+        self.nav_list.setObjectName("navList")
+        self.nav_list.setFixedWidth(210)
         nav_font = QFont()
         nav_font.setPointSize(10)
         self.nav_list.setFont(nav_font)
-        
-        # 美化左侧导航栏的样式 (深色主题)
-        self.nav_list.setStyleSheet("""
-            QListWidget {
-                background-color: #2b2b2b;
-                border: 1px solid #3f3f3f;
-                border-radius: 4px;
-                outline: none;
-                color: #d4d4d4;
-            }
-            QListWidget::item {
-                padding: 12px 10px;
-                border-bottom: 1px solid #3f3f3f;
-            }
-            QListWidget::item:selected {
-                background-color: #005a9e;
-                color: white;
-                border-radius: 2px;
-            }
-            QListWidget::item:hover:!selected {
-                background-color: #3f3f3f;
-            }
-        """)
-        
-        self.nav_list.addItem("Solution Simulator")
-        self.nav_list.addItem("Ligand Simulator")
-        self.nav_list.addItem("Umbrella Sampling [WIP]")
-        self.nav_list.addItem("Polymer Simulator [WIP]")
-        
+
+        # 导航项（序号前缀帮助用户建立流程心智模型）
+        nav_items = [
+            ("01", "Solution Simulator", "溶液体系模拟"),
+            ("02", "Ligand Simulator", "蛋白-配体复合物模拟"),
+            ("03", "Umbrella Sampling", "伞形取样自由能计算"),
+            ("04", "Polymer Simulator", "聚合物模拟（开发中）"),
+        ]
+        for num, name, desc in nav_items:
+            item = QListWidgetItem(f"  {num}  {name}")
+            item.setToolTip(desc)
+            self.nav_list.addItem(item)
+
         self.main_layout.addWidget(self.nav_list)
         
         # === 右侧主体区域（QSplitter 可拖拽调整上下比例） ===
@@ -101,7 +86,7 @@ class MainWindow(QMainWindow):
         self.setup_wip_module("Polymer Simulator 正在开发中...\n\n敬请期待！")
         
         # 连接导航点击事件
-        self.nav_list.currentRowChanged.connect(self.stacked_widget.setCurrentIndex)
+        self.nav_list.currentRowChanged.connect(self._on_nav_changed)
         
         # 初始化 Solution Simulator 的各个功能标签页
         self.init_topology_tab()
@@ -113,15 +98,31 @@ class MainWindow(QMainWindow):
         # 默认选中第一项
         self.nav_list.setCurrentRow(0)
         
-        # 底部日志输出窗口 (全局共享)
+        # 底部日志输出窗口 (全局共享, 可折叠)
         self.log_widget = QWidget()
         log_layout = QVBoxLayout(self.log_widget)
         log_layout.setContentsMargins(0, 0, 0, 0)
-        
+        log_layout.setSpacing(4)
+
+        # 日志标题行：标题 + 折叠按钮
+        log_header = QHBoxLayout()
+        log_title = QLabel("全局运行日志")
+        log_title.setStyleSheet("font-weight: bold; font-size: 11px; color: #8a8a8a;")
+        self.btn_toggle_log = QToolButton()
+        self.btn_toggle_log.setText("▼ 收起")
+        self.btn_toggle_log.setToolTip("展开 / 收起日志面板")
+        self.btn_toggle_log.setCheckable(True)
+        self.btn_toggle_log.setChecked(True)
+        self.btn_toggle_log.setAutoRaise(True)
+        self.btn_toggle_log.clicked.connect(self.toggle_log)
+        log_header.addWidget(log_title)
+        log_header.addStretch()
+        log_header.addWidget(self.btn_toggle_log)
+        log_layout.addLayout(log_header)
+
         self.log_output = QTextEdit()
+        self.log_output.setObjectName("logOutput")
         self.log_output.setReadOnly(True)
-        self.log_output.setStyleSheet("background-color: #1e1e1e; color: #d4d4d4; font-family: Consolas;")
-        log_layout.addWidget(QLabel("全局运行日志:"))
         log_layout.addWidget(self.log_output, stretch=1)
         
         # 测试GROMACS按钮
@@ -134,6 +135,10 @@ class MainWindow(QMainWindow):
         # 设置初始比例（上 75% : 下 25%）
         self.splitter.setStretchFactor(0, 3)
         self.splitter.setStretchFactor(1, 1)
+        self._log_visible = True
+
+        # 状态栏：环境状态 + 当前工作目录
+        self._setup_statusbar()
 
     def setup_wip_module(self, text):
         widget = QWidget()
@@ -146,25 +151,58 @@ class MainWindow(QMainWindow):
         layout.addWidget(label)
         self.stacked_widget.addWidget(widget)
 
-    def init_topology_tab(self):
-        tab = TopologyTab(self)
-        self.solution_tabs.addTab(tab, "1. 拓扑与水箱")
-        
-    def init_em_tab(self):
-        tab = EMTab(self)
-        self.solution_tabs.addTab(tab, "2. 能量最小化")
-        
-    def init_eq_tab(self):
-        tab = EQTab(self)
-        self.solution_tabs.addTab(tab, "3. 系统平衡")
-        
-    def init_md_tab(self):
-        tab = MDTab(self)
-        self.solution_tabs.addTab(tab, "4. 生产模拟")
-        
-    def init_analysis_tab(self):
-        tab = AnalysisTab(self)
-        self.solution_tabs.addTab(tab, "5. 分析与可视化")
+    # ── 导航 ────────────────────────────────────────────────────────────────
+    def _on_nav_changed(self, index: int):
+        """导航切换：切换模块并更新状态栏工作目录"""
+        self.stacked_widget.setCurrentIndex(index)
+        self._update_status_cwd()
+
+    def _update_status_cwd(self):
+        """根据当前模块显示工作目录"""
+        try:
+            idx = self.stacked_widget.currentIndex()
+            cwd = None
+            if idx == 0:
+                cwd = self.solution_tabs.widget(0).cwd
+            elif idx == 1:
+                cwd = self.ligand_simulator.prep_tab.cwd
+            if cwd:
+                self.statusBar().showMessage(f"工作目录: {cwd}")
+                return
+        except Exception:
+            pass
+        self.statusBar().showMessage("工作目录: 未设置")
+
+    # ── 状态栏 ──────────────────────────────────────────────────────────────
+    def _setup_statusbar(self):
+        """状态栏：左侧工作目录，右侧 GROMACS 环境状态"""
+        sb = self.statusBar()
+        sb.showMessage("工作目录: 未设置")
+
+        # 环境状态徽标
+        self.status_env_dot = QLabel()
+        self.status_env_dot.setStyleSheet("font-size: 13px;")
+        sb.addPermanentWidget(self.status_env_dot)
+        self._refresh_gmx_status()
+
+    def _refresh_gmx_status(self):
+        """刷新 GROMACS 环境状态徽标"""
+        if not hasattr(self, "status_env_dot"):
+            return
+        if self.runner.is_ready():
+            dot, color, txt = "●", "#89d185", " GROMACS 就绪"
+        else:
+            dot, color, txt = "○", "#f48771", " GROMACS 未配置"
+        self.status_env_dot.setStyleSheet(
+            f"color: {color}; font-size: 12px; font-weight: bold; padding-right: 12px;")
+        self.status_env_dot.setText(dot + txt)
+
+    # ── 日志折叠 ────────────────────────────────────────────────────────────
+    def toggle_log(self):
+        """展开 / 收起底部日志面板"""
+        self._log_visible = not self._log_visible
+        self.log_widget.setVisible(self._log_visible)
+        self.btn_toggle_log.setText("▼ 收起" if self._log_visible else "▲ 展开")
 
     def log(self, message):
         """向日志窗口输出信息"""
@@ -185,6 +223,27 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "成功", "GROMACS 运行正常！")
         else:
             QMessageBox.critical(self, "错误", f"GROMACS 运行失败，请检查路径。\n\n{output}")
+        self._refresh_gmx_status()
+
+    def init_topology_tab(self):
+        tab = TopologyTab(self)
+        self.solution_tabs.addTab(tab, "1. 拓扑与水箱")
+        
+    def init_em_tab(self):
+        tab = EMTab(self)
+        self.solution_tabs.addTab(tab, "2. 能量最小化")
+        
+    def init_eq_tab(self):
+        tab = EQTab(self)
+        self.solution_tabs.addTab(tab, "3. 系统平衡")
+        
+    def init_md_tab(self):
+        tab = MDTab(self)
+        self.solution_tabs.addTab(tab, "4. 生产模拟")
+        
+    def init_analysis_tab(self):
+        tab = AnalysisTab(self)
+        self.solution_tabs.addTab(tab, "5. 分析与可视化")
 
     def _ensure_gmx_configured(self):
         """确保 GROMACS 路径已配置，未配置则引导用户设置"""
@@ -223,3 +282,5 @@ class MainWindow(QMainWindow):
         else:
             self.log("[系统] 警告：未配置 GROMACS 路径，部分功能不可用。\n"
                       "       可稍后点击「测试 GROMACS 环境」按钮重新配置。")
+        self._refresh_gmx_status()
+        self._update_status_cwd()

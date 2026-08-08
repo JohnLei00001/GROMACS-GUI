@@ -25,7 +25,7 @@ class WindowTab(QWidget):
         w = QWidget(); layout = QVBoxLayout(w)
 
         self.status_label = QLabel("等待 Pull 模拟完成...")
-        self.status_label.setStyleSheet("color: #888; font-weight: bold; font-size: 11pt;")
+        self.status_label.setStyleSheet("color: #8a8a8a; font-weight: bold; font-size: 11pt;")
         layout.addWidget(self.status_label)
 
         g1 = QGroupBox("窗口设置")
@@ -61,7 +61,7 @@ class WindowTab(QWidget):
     def update_context(self, ctx: UmbrellaContext):
         self.ctx = ctx
         self.status_label.setText(f"工作目录: {ctx.cwd}")
-        self.status_label.setStyleSheet("color: #2a2; font-weight: bold; font-size: 11pt;")
+        self.status_label.setStyleSheet("color: #89d185; font-weight: bold; font-size: 11pt;")
 
     def extract_windows(self):
         if not self.ctx:

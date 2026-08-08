@@ -113,7 +113,7 @@ class EquilibrationTab(QWidget):
         # ── 状态+GPU ──
         top_row = QHBoxLayout()
         self.status_label = QLabel("等待体系构建完成...")
-        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #888;")
+        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #8a8a8a;")
         top_row.addWidget(self.status_label, stretch=1)
         top_row.addWidget(QLabel("GPU:"))
         self.gpu_combo = QComboBox()
@@ -198,7 +198,7 @@ class EquilibrationTab(QWidget):
     def update_context(self, ctx: UmbrellaContext):
         self.ctx = ctx
         self.status_label.setText(f"工作目录: {ctx.cwd}  |  输入: {ctx.structure_file}")
-        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #2a2;")
+        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #89d185;")
 
     # ── MDP 编辑 ──
 
@@ -227,7 +227,7 @@ class EquilibrationTab(QWidget):
         self.btn_all.setEnabled(False)
         self.progress.setVisible(True); self.progress.setValue(0)
         self.status_label.setText("EM 运行中...")
-        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #c90;")
+        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #d7ba7d;")
 
         # Step 1: 保存 EM MDP
         try:
@@ -302,7 +302,7 @@ class EquilibrationTab(QWidget):
         self._running = False
         self.btn_all.setEnabled(True)
         self.status_label.setText("平衡阶段完成")
-        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #2a2;")
+        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #89d185;")
         QMessageBox.information(self, "完成", "平衡阶段 (EM → NVT → NPT) 完成！\n请继续到「Pull 模拟」。")
         self.eq_done.emit(self.ctx)
 
@@ -365,7 +365,7 @@ class EquilibrationTab(QWidget):
         self.btn_all.setEnabled(True)
         self.progress.setVisible(False)
         self.status_label.setText("平衡失败")
-        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: red;")
+        self.status_label.setStyleSheet("font-size: 11pt; font-weight: bold; color: #f48771;")
         self.main_window.log(f">>> [平衡] 错误: {msg}")
         QMessageBox.critical(self, "平衡阶段错误", msg)
 

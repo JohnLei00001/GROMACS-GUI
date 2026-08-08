@@ -118,7 +118,7 @@ class MDPEditor(QDialog):
         
     def add_section_header(self, title):
         label = QLabel(title)
-        label.setStyleSheet("font-weight: bold; color: #4a90e2; margin-top: 10px; margin-bottom: 5px;")
+        label.setStyleSheet("font-weight: bold; color: #007acc; margin-top: 10px; margin-bottom: 5px;")
         self.form_layout.addRow(label)
         
     def add_line_param(self, key, default, label_text):

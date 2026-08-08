@@ -12,8 +12,8 @@ from PyQt6.QtCore import pyqtSignal
 from .workflow_context import UmbrellaContext
 import os
 import matplotlib
-matplotlib.use('Qt5Agg')
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+matplotlib.use('QtAgg')
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 
@@ -33,7 +33,7 @@ class PullTab(QWidget):
         w = QWidget(); layout = QVBoxLayout(w)
 
         self.status_label = QLabel("等待体系构建完成...")
-        self.status_label.setStyleSheet("color: #888; font-weight: bold; font-size: 11pt;")
+        self.status_label.setStyleSheet("color: #8a8a8a; font-weight: bold; font-size: 11pt;")
         layout.addWidget(self.status_label)
 
         g1 = QGroupBox("Pull 模拟参数")
@@ -80,7 +80,7 @@ class PullTab(QWidget):
     def update_context(self, ctx: UmbrellaContext):
         self.ctx = ctx
         self.status_label.setText(f"工作目录: {ctx.cwd}  |  输入: {ctx.npt_gro}")
-        self.status_label.setStyleSheet("color: #2a2; font-weight: bold; font-size: 11pt;")
+        self.status_label.setStyleSheet("color: #89d185; font-weight: bold; font-size: 11pt;")
 
     def run_pull(self):
         if not self.ctx:
@@ -132,7 +132,7 @@ class PullTab(QWidget):
 
         self.btn_run.setEnabled(False)
         self.status_label.setText("Pull 运行中...")
-        self.status_label.setStyleSheet("color: #c90; font-weight: bold; font-size: 11pt;")
+        self.status_label.setStyleSheet("color: #d7ba7d; font-weight: bold; font-size: 11pt;")
 
         a1 = ["grompp", "-f", "pull.mdp", "-c", self.ctx.npt_gro, "-r", self.ctx.npt_gro,
               "-p", self.ctx.topology_file, "-o", "pull.tpr", "-maxwarn", "2"]
@@ -142,7 +142,7 @@ class PullTab(QWidget):
         if not success:
             self.btn_run.setEnabled(True)
             self.status_label.setText("Pull grompp 失败")
-            self.status_label.setStyleSheet("color: red; font-weight: bold; font-size: 11pt;")
+            self.status_label.setStyleSheet("color: #f48771; font-weight: bold; font-size: 11pt;")
             QMessageBox.critical(self, "错误", f"Pull grompp 失败:\n{message}")
             return
         self.main_window.log(">>> 开始 Pull 模拟...")
@@ -153,12 +153,12 @@ class PullTab(QWidget):
         self.btn_run.setEnabled(True)
         if not success:
             self.status_label.setText("Pull 失败")
-            self.status_label.setStyleSheet("color: red; font-weight: bold; font-size: 11pt;")
+            self.status_label.setStyleSheet("color: #f48771; font-weight: bold; font-size: 11pt;")
             QMessageBox.critical(self, "错误", f"Pull 模拟失败:\n{message}")
             return
         self.main_window.log(">>> Pull 模拟完成")
         self.status_label.setText("Pull 完成")
-        self.status_label.setStyleSheet("color: #2a2; font-weight: bold; font-size: 11pt;")
+        self.status_label.setStyleSheet("color: #89d185; font-weight: bold; font-size: 11pt;")
         self._plot_pullx()
         QMessageBox.information(self, "完成",
             "Pull 模拟完成！已生成 pullx.xvg 和 pullf.xvg。\n请继续到「窗口设置」。")

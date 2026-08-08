@@ -24,7 +24,7 @@ class ComplexTab(QWidget):
 
         # 0. 状态信息
         self.status_label = QLabel("等待配体导入... (请先完成「1. 配体准备」标签页)")
-        self.status_label.setStyleSheet("color: red; font-weight: bold;")
+        self.status_label.setStyleSheet("color: #f48771; font-weight: bold;")
         layout.addWidget(self.status_label)
 
         # 1. 选择蛋白 PDB
@@ -69,7 +69,7 @@ class ComplexTab(QWidget):
         build_layout = QVBoxLayout()
         
         build_info = QLabel("合并 protein.gro + ligand.gro，更新 topol.top 加入配体拓扑。\n配体坐标应已处于正确空间位置（来自对接、实验结构等）。")
-        build_info.setStyleSheet("color: #888; font-style: italic;")
+        build_info.setStyleSheet("color: #8a8a8a; font-style: italic;")
         build_layout.addWidget(build_info)
         
         btn_build_complex = QPushButton("合并生成复合物 (complex.gro & topol.top)")
@@ -135,7 +135,7 @@ class ComplexTab(QWidget):
         self.ligand_itp = os.path.basename(itp_path)
         self.ligand_gro = os.path.basename(gro_path)
         self.status_label.setText(f"✅ 配体: {self.ligand_itp} + {self.ligand_gro} (目录: {self.cwd})")
-        self.status_label.setStyleSheet("color: green; font-weight: bold;")
+        self.status_label.setStyleSheet("color: #89d185; font-weight: bold;")
 
     def set_buttons_enabled(self, enabled):
         for child in self.findChildren(QPushButton):

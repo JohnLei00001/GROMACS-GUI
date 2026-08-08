@@ -43,7 +43,7 @@ class LigandPrepTab(QWidget):
             "拓扑 (.itp) 和结构 (.gro/.pdb) 必须来自同一来源，以保证原子数一致。\n"
             "配体坐标应已处于蛋白结合位点附近的正确参考系中（如来自对接、实验结构等）。"
         )
-        info_label.setStyleSheet("color: #888; font-size: 14px;")
+        info_label.setStyleSheet("color: #8a8a8a; font-size: 14px;")
         info_label.setWordWrap(True)
         source_layout.addWidget(info_label)
         
@@ -143,7 +143,7 @@ class LigandPrepTab(QWidget):
                 f"结构: {target_gro}\n\n"
                 f"下一步：请在「复合物拓扑与水箱」标签页中选择蛋白 PDB 文件。"
             )
-            self.res_info.setStyleSheet("color: green; font-weight: bold;")
+            self.res_info.setStyleSheet("color: #89d185; font-weight: bold;")
             self.topology_ready.emit(self.cwd, target_itp, target_gro)
         except Exception as e:
             QMessageBox.critical(self, "错误", f"导入失败: {str(e)}")

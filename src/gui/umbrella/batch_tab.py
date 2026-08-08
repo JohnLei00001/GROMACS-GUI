@@ -27,7 +27,7 @@ class BatchTab(QWidget):
         w = QWidget(); layout = QVBoxLayout(w)
 
         self.status_label = QLabel("等待窗口配置完成...")
-        self.status_label.setStyleSheet("color: #888; font-weight: bold; font-size: 11pt;")
+        self.status_label.setStyleSheet("color: #8a8a8a; font-weight: bold; font-size: 11pt;")
         layout.addWidget(self.status_label)
 
         ctrl = QHBoxLayout()
@@ -60,7 +60,7 @@ class BatchTab(QWidget):
         self.ctx = ctx
         n = len(ctx.windows) if ctx.windows else 0
         self.status_label.setText(f"{n} 个窗口已就绪 (目录: {ctx.cwd})")
-        self.status_label.setStyleSheet("color: #2a2; font-weight: bold; font-size: 11pt;")
+        self.status_label.setStyleSheet("color: #89d185; font-weight: bold; font-size: 11pt;")
         self._refresh_list()
 
     def _refresh_list(self):

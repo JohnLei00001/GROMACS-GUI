@@ -15,3 +15,6 @@ local_test/
 
 # Local planning notes
 ROADMAP.md
+
+# Temporary UI smoke test
+_smoke_test.py

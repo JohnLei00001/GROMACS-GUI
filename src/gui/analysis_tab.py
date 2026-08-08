@@ -112,7 +112,7 @@ class AnalysisTab(QWidget):
 
         if not HAS_MATPLOTLIB:
             warn_label = QLabel("提示: 未检测到 matplotlib，绘图功能不可用。请运行 pip install matplotlib")
-            warn_label.setStyleSheet("color: red;")
+            warn_label.setStyleSheet("color: #f48771;")
             layout.addWidget(warn_label)
 
     def get_cwd(self):

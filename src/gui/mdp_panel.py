@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
-                             QPushButton, QLabel, QGroupBox, QFormLayout,
-                             QComboBox, QLineEdit, QTextEdit)
-from PyQt6.QtCore import pyqtSignal
+                             QPushButton, QLabel, QFormLayout, QFrame,
+                             QComboBox, QLineEdit, QTextEdit, QToolButton)
+from PyQt6.QtCore import Qt, pyqtSignal
 import re
 
 # ── default values per section ──────────────────────────────────────────────
@@ -84,6 +84,90 @@ _WIDGET_TYPE = {
     "pbc":                       ("combo", ["xyz","no","xy"]),
 }
 
+# 分区标题（中英对照）
+_SECTION_TITLES = {
+    "run_em":        "运行控制 (Run Control)",
+    "run":           "运行控制 (Run Control)",
+    "output":        "输出控制 (Output Control)",
+    "output_md":     "输出控制 (Output Control)",
+    "neighbor":      "邻居搜索与相互作用 (Neighbor Searching)",
+    "electrostatics": "静电学 (Electrostatics)",
+    "thermostat":    "温度耦合 (Temperature Coupling)",
+    "barostat":      "压力耦合 (Pressure Coupling)",
+    "constraints":   "键长约束 (Constraints)",
+    "continuation":  "续跑设置 (Continuation)",
+    "velocity":      "初始速度生成 (Velocity Generation)",
+    "pbc":           "周期性边界条件 (PBC)",
+}
+
+# 默认展开的分区（核心参数）
+_EXPANDED_DEFAULT = {"run_em", "run", "output", "output_md"}
+
+# 参数说明（悬停提示，帮助用户理解物理含义）
+_KEY_DESC = {
+    "integrator":     "积分算法：steep/cg 用于能量最小化，md 用于动力学",
+    "nsteps":         "总模拟步数。生产模拟常用 500000 步以上 (1 ns @ dt=2fs)",
+    "dt":             "时间步长 (ps)。推荐 0.002 (2 fs)，与键长约束搭配",
+    "emtol":          "能量最小化收敛判据 (kJ/mol/nm)。越小越严格",
+    "emstep":         "最小化初始步长 (nm)。过大可能导致震荡",
+    "nstxout":        "完整坐标轨迹输出频率（步）。0 表示不输出",
+    "nstxout-compressed": "压缩轨迹输出频率（步）。分析主要用这个",
+    "cutoff-scheme":  "截断方案。Verlet 为推荐方案（GPU 加速友好）",
+    "coulombtype":    "静电相互作用算法。PME 为推荐方案",
+    "rcoulomb":       "静电截断半径 (nm)。与 rvdw 保持一致",
+    "rvdw":           "范德华截断半径 (nm)",
+    "tcoupl":         "控温算法。V-rescale 适合平衡，nose-hoover 适合严格 NVT 系综",
+    "ref_t":          "参考温度 (K)。一般设为实验温度如 300",
+    "pcoupl":         "控压算法。Parrinello-Rahman 用于生产，berendsen 用于平衡",
+    "ref_p":          "参考压力 (bar)。通常 1.0",
+    "constraints":    "键长约束：h-bonds 约束含氢键，all-bonds 约束全部键",
+    "continuation":   "续跑模式：yes 表示从先前模拟续跑（不重新生成初速度）",
+    "gen_vel":        "是否生成初始速度。首次运行选 yes，续跑选 no",
+    "gen_temp":       "初始速度对应的温度 (K)",
+    "pbc":            "周期性边界条件。xyz 为三维周期（常用）",
+}
+
+
+class _CollapsibleSection(QWidget):
+    """可折叠参数分区：点击标题栏展开/收起"""
+
+    def __init__(self, title: str, expanded: bool = False, parent=None):
+        super().__init__(parent)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(4)
+
+        self._btn = QToolButton()
+        self._btn.setText(title)
+        self._btn.setCheckable(True)
+        self._btn.setChecked(expanded)
+        self._btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self._btn.setAutoRaise(True)
+        self._btn.setStyleSheet(
+            "QToolButton { border: none; background: transparent;"
+            " font-weight: bold; color: #b9b9b9; padding: 6px 2px; text-align: left; }"
+            "QToolButton:hover { color: #ffffff; }")
+        self._btn.clicked.connect(self._toggle)
+        lay.addWidget(self._btn)
+
+        self._content = QWidget()
+        self._content.setVisible(expanded)
+        lay.addWidget(self._content)
+
+    def _toggle(self):
+        self._content.setVisible(self._btn.isChecked())
+
+    def layout(self) -> QFormLayout:
+        """返回内容区的表单布局（惰性创建）"""
+        if self._content.layout() is None:
+            fl = QFormLayout(self._content)
+            fl.setContentsMargins(10, 2, 0, 4)
+            fl.setVerticalSpacing(6)
+            fl.setHorizontalSpacing(16)
+            fl.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+            self._content.setLayout(fl)
+        return self._content.layout()
+
 
 class MDPPanel(QWidget):
     """结构化 MDP 参数面板，直接嵌入标签页，取代 QTextEdit + MDPEditor 弹窗"""
@@ -104,7 +188,10 @@ class MDPPanel(QWidget):
     def init_ui(self):
         root = QVBoxLayout(self); root.setContentsMargins(0, 0, 0, 0)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
         form_w = QWidget(); self.form = QVBoxLayout(form_w)
+        self.form.setContentsMargins(0, 0, 0, 0)
+        self.form.setSpacing(0)
 
         sections = _MDP_TYPE_SECTIONS.get(self.mdp_type, [])
         for sec in sections:
@@ -117,7 +204,7 @@ class MDPPanel(QWidget):
         self.form.addWidget(self.btn_toggle_raw)
 
         self.raw_edit = QTextEdit()
-        self.raw_edit.setStyleSheet("font-family: Consolas; font-size: 9pt;")
+        self.raw_edit.setObjectName("rawMdp")
         self.raw_edit.hide()
         self.form.addWidget(self.raw_edit)
         self._raw_builtin = True
@@ -128,32 +215,24 @@ class MDPPanel(QWidget):
         keys = _SECTION_KEYS.get(sec_name, [])
         if not keys: return
 
-        titles = {
-            "run_em": "运行控制 (Run Control)",
-            "run": "运行控制 (Run Control)",
-            "output": "输出控制 (Output Control)",
-            "output_md": "输出控制 (Output Control)",
-            "neighbor": "邻居搜索与相互作用 (Neighbor Searching)",
-            "electrostatics": "静电学 (Electrostatics)",
-            "thermostat": "温度耦合 (Temperature Coupling)",
-            "barostat": "压力耦合 (Pressure Coupling)",
-            "constraints": "键长约束 (Constraints)",
-            "continuation": "续跑设置 (Continuation)",
-            "velocity": "初始速度生成 (Velocity Generation)",
-            "pbc": "周期性边界条件 (PBC)",
-        }
-        g = QGroupBox(titles.get(sec_name, sec_name))
-        fl = QFormLayout()
+        title = _SECTION_TITLES.get(sec_name, sec_name)
+        sec = _CollapsibleSection(title, expanded=sec_name in _EXPANDED_DEFAULT)
+        fl = sec.layout()
         for key in keys:
             wt = _WIDGET_TYPE.get(key, ("line", []))
             if wt[0] == "combo":
                 w = QComboBox(); w.addItems(wt[1])
             else:
                 w = QLineEdit()
-            fl.addRow(f"{key}", w)
+            label = QLabel(f"{key}")
+            desc = _KEY_DESC.get(key)
+            if desc:
+                label.setToolTip(desc)
+                if isinstance(w, (QLineEdit, QComboBox)):
+                    w.setToolTip(desc)
+            fl.addRow(label, w)
             self._widgets[key] = w
-        g.setLayout(fl)
-        self.form.addWidget(g)
+        self.form.addWidget(sec)
 
     # ── defaults ─────────────────────────────────────────────────────────────
     def _init_defaults(self):

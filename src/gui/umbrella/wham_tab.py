@@ -7,8 +7,8 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QScrollArea,
 from .workflow_context import UmbrellaContext
 import os, shutil
 import matplotlib
-matplotlib.use('Qt5Agg')
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+matplotlib.use('QtAgg')
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 
@@ -26,7 +26,7 @@ class WhamTab(QWidget):
         w = QWidget(); layout = QVBoxLayout(w)
 
         self.status_label = QLabel("等待批量 MD 完成...")
-        self.status_label.setStyleSheet("color: #888; font-weight: bold; font-size: 11pt;")
+        self.status_label.setStyleSheet("color: #8a8a8a; font-weight: bold; font-size: 11pt;")
         layout.addWidget(self.status_label)
 
         g1 = QGroupBox("WHAM 参数")
@@ -67,7 +67,7 @@ class WhamTab(QWidget):
         self.ctx = ctx
         n = len(ctx.windows) if ctx.windows else 0
         self.status_label.setText(f"{n} 个窗口 (目录: {ctx.cwd})")
-        self.status_label.setStyleSheet("color: #2a2; font-weight: bold; font-size: 11pt;")
+        self.status_label.setStyleSheet("color: #89d185; font-weight: bold; font-size: 11pt;")
 
     def run_wham(self):
         if not self.ctx or not self.ctx.windows:
