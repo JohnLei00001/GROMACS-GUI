@@ -1,6 +1,14 @@
 import subprocess
+import sys
 from PyQt6.QtCore import QObject, pyqtSignal, QThread
 from .config import get_gmx_env
+
+
+def _no_console_kwargs():
+    """Windows 下隐藏子进程控制台窗口（gmx.exe 是控制台程序）"""
+    if sys.platform == "win32":
+        return {"creationflags": subprocess.CREATE_NO_WINDOW}
+    return {}
 
 class GromacsWorker(QThread):
     # 信号定义
@@ -32,7 +40,8 @@ class GromacsWorker(QThread):
                 "encoding": 'utf-8',
                 "errors": 'replace',
                 "bufsize": 1,
-                "env": env
+                "env": env,
+                **_no_console_kwargs()
             }
             
             if self.input_text:

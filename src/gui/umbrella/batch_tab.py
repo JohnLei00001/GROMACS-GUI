@@ -15,8 +15,8 @@ import os
 class BatchTab(QWidget):
     batch_done = pyqtSignal(UmbrellaContext)
 
-    def __init__(self, main_window):
-        super().__init__()
+    def __init__(self, main_window, parent=None):
+        super().__init__(parent)
         self.main_window = main_window
         self.runner = main_window.runner
         self.ctx: UmbrellaContext = None

@@ -3,11 +3,13 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout,
                              QComboBox, QPushButton, QScrollArea, QWidget, QFrame)
 from PyQt6.QtCore import Qt
 from gui.i18n import tr, trf
-from gui.theme import set_role
+from gui.theme import set_role, get_qss
 
 class MDPEditor(QDialog):
     def __init__(self, parent=None, mdp_type="nvt", current_content=""):
         super().__init__(parent)
+        # 弹窗不是主窗口子树，需应用与主窗口一致的主题 QSS
+        self.setStyleSheet(get_qss())
         self.setWindowTitle(trf("MDP 参数配置 - {type}", type=mdp_type.upper()))
         self.resize(600, 700)
         self.mdp_type = mdp_type

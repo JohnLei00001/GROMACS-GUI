@@ -1,6 +1,13 @@
 import subprocess
+import sys
 from .config import get_gmx_path, get_gmx_env
 from .worker import GromacsWorker
+
+# Windows 下隐藏子进程控制台窗口（gmx.exe 是控制台程序，不隐藏会弹出黑色 CMD 窗口）
+def _no_console_kwargs():
+    if sys.platform == "win32":
+        return {"creationflags": subprocess.CREATE_NO_WINDOW}
+    return {}
 
 class GromacsRunner:
     def __init__(self):
@@ -41,7 +48,8 @@ class GromacsRunner:
                 encoding='utf-8',
                 errors='replace',
                 check=True,
-                env=env
+                env=env,
+                **_no_console_kwargs()
             )
             return True, result.stdout
         except subprocess.CalledProcessError as e:

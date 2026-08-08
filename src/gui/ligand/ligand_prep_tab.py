@@ -14,8 +14,8 @@ class LigandPrepTab(QWidget):
     # 信号：配体导入成功时发出 (cwd, itp_path, gro_path)
     topology_ready = pyqtSignal(str, str, str)
 
-    def __init__(self, main_window):
-        super().__init__()
+    def __init__(self, main_window, parent=None):
+        super().__init__(parent)
         self.main_window = main_window
         self.runner = main_window.runner
         self.cwd = ""

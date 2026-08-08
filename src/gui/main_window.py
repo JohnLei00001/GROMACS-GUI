@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                              QLabel, QTabWidget, QMessageBox,
                              QStackedWidget, QFileDialog, QSplitter, QToolButton)
 from PyQt6.QtCore import Qt, QEvent
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QIcon, QPixmap, QImage
 import os
 import sys
 import platform
@@ -12,7 +12,7 @@ import datetime
 # 导入 GROMACS 运行器
 from core.runner import GromacsRunner
 from core.config import needs_configuration, save_gmx_path, get_setting
-from gui.theme import apply_theme, set_role, get_mode, set_mode
+from gui.theme import apply_theme, set_role, get_mode, set_mode, palette
 from gui.i18n import tr, trf, get_language, set_language, retranslate_tree
 from gui.widgets import AppSidebar
 from gui.topology_tab import TopologyTab
@@ -102,21 +102,18 @@ class MainWindow(QMainWindow):
 
         self.btn_min = QToolButton()
         self.btn_min.setObjectName("winBtn")
-        self.btn_min.setText("─")
         self.btn_min.setToolTip(tr("最小化"))
         self.btn_min.clicked.connect(self.showMinimized)
         lay.addWidget(self.btn_min)
 
         self.btn_max = QToolButton()
         self.btn_max.setObjectName("winBtn")
-        self.btn_max.setText("□")
         self.btn_max.setToolTip(tr("最大化"))
         self.btn_max.clicked.connect(self._toggle_maximize)
         lay.addWidget(self.btn_max)
 
         self.btn_close = QToolButton()
         self.btn_close.setObjectName("winClose")
-        self.btn_close.setText("✕")
         self.btn_close.setToolTip(tr("关闭"))
         self.btn_close.clicked.connect(self.close)
         lay.addWidget(self.btn_close)
@@ -124,6 +121,7 @@ class MainWindow(QMainWindow):
         self.root_layout.insertWidget(0, self.top_bar)
         self.top_bar.installEventFilter(self)
         self._refresh_top_buttons()
+        self._refresh_win_buttons()
         self._refresh_gmx_status()
 
     # ── 无边框窗口交互（拖动 / 双击最大化） ───────────────────────────────
@@ -152,12 +150,24 @@ class MainWindow(QMainWindow):
     def _refresh_win_buttons(self):
         if not hasattr(self, "btn_max"):
             return
+        icon_color = palette()["fg_muted"]
+        # 窗口控制图标：与顶栏按钮一致的 SVG 线性风格，16px 统一尺寸
         if self.isMaximized():
-            self.btn_max.setText("❐")
+            self.btn_max.setIcon(self._svg_icon(
+                '<rect x="5" y="5" width="14" height="14" rx="1.5"/>'
+                '<path d="M8.5 5v-.5A1.5 1.5 0 0 1 10 3h7.5A1.5 1.5 0 0 1 19 4.5V12a1.5 1.5 0 0 1-1.5 1.5H17"/>',
+                icon_color))
             self.btn_max.setToolTip(tr("还原"))
         else:
-            self.btn_max.setText("□")
+            self.btn_max.setIcon(self._svg_icon(
+                '<rect x="4" y="4" width="16" height="16" rx="1.5"/>',
+                icon_color))
             self.btn_max.setToolTip(tr("最大化"))
+        self.btn_min.setIcon(self._svg_icon(
+            '<path d="M5 12h14"/>', icon_color))
+        self.btn_close.setIcon(self._svg_icon(
+            '<path d="M6 6l12 12M18 6L6 18"/>',
+            palette()["fg_muted"] if not self.btn_close.underMouse() else "#ffffff"))
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -194,31 +204,33 @@ class MainWindow(QMainWindow):
         self.stacked_widget = QStackedWidget()
         self.splitter.addWidget(self.stacked_widget)
 
-        # --- 模块 1: Solution Simulator ---
+        # 顶部统一页签栏：所有 Pipeline 共享同一 QTabWidget，保证切换模块时页签栏对齐
         self.solution_tabs = QTabWidget()
         self.stacked_widget.addWidget(self.solution_tabs)
 
-        # --- 模块 2: Ligand Simulator ---
+        # 各模块采用懒加载：页面首次切换时才构建（提升启动与主题切换性能）
         self.ligand_simulator = LigandSimulator(self)
-        self.stacked_widget.addWidget(self.ligand_simulator)
-
-        # --- 模块 3: Umbrella Sampling ---
         self.umbrella_simulator = UmbrellaSimulator(self)
-        self.stacked_widget.addWidget(self.umbrella_simulator)
 
-        # --- 模块 4: 占位符 (WIP) ---
+        # --- 模块 4: 占位符 (WIP) —— stacked_widget 第 2 页 ---
         self.setup_wip_module(tr("Polymer Simulator 正在开发中...\n\n敬请期待！"))
 
-        # 初始化 Solution Simulator 的各个功能标签页
+        # 默认模块（溶液）的页面在启动时构建
         self.init_topology_tab()
         self.init_em_tab()
         self.init_eq_tab()
         self.init_md_tab()
         self.init_analysis_tab()
+        self._pipeline_ranges = {}      # 模块 -> (起始页签, 结束页签)
+        self._pipeline_ranges[0] = (0, self.solution_tabs.count() - 1)
+
+        # 导航 → stacked_widget 页面：0/1/2 均为共享页签栏（索引0），3 为 WIP（索引1）
+        self._nav_stack_map = {0: 0, 1: 0, 2: 0, 3: 1}
 
         # 默认选中第一项
         self.sidebar.set_current(0)
         self.stacked_widget.setCurrentIndex(0)
+        self.solution_tabs.setCurrentIndex(0)
 
     # ═══ 日志面板 ═════════════════════════════════════════════════════════
     def _build_log_panel(self):
@@ -280,22 +292,49 @@ class MainWindow(QMainWindow):
         sb.showMessage(tr("工作目录: 未设置"))
 
     # ── 顶栏按钮 ──────────────────────────────────────────────────────────
+    @staticmethod
+    def _svg_icon(paths: str, color: str, size: int = 16) -> QIcon:
+        """Vercel 风格线性图标（SVG stroke）"""
+        svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}"'
+               f' viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="1.8"'
+               f' stroke-linecap="round" stroke-linejoin="round">{paths}</svg>')
+        img = QImage.fromData(svg.encode())
+        return QIcon(QPixmap.fromImage(img))
+
+    _ICON_SUN = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'
+    _ICON_MOON = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'
+    _ICON_GLOBE = ('<circle cx="12" cy="12" r="9"/>'
+                   '<path d="M3 12h18M12 3a14.5 14.5 0 0 1 0 18M12 3a14.5 14.5 0 0 0 0 18"/>')
+
     def _refresh_top_buttons(self):
+        """根据当前主题 / 语言刷新顶栏按钮图标"""
+        C = palette()
+        icon_color = C["fg_muted"]
         if get_mode() == "light":
-            self.btn_theme.setText("☀️ " + tr("亮色"))
+            self.btn_theme.setIcon(self._svg_icon(self._ICON_SUN, icon_color))
+            self.btn_theme.setText("")
+            self.btn_theme.setToolTip(tr("切换主题（亮 / 暗）") + " · " + tr("深色"))
         else:
-            self.btn_theme.setText("🌙 " + tr("深色"))
+            self.btn_theme.setIcon(self._svg_icon(self._ICON_MOON, icon_color))
+            self.btn_theme.setText("")
+            self.btn_theme.setToolTip(tr("切换主题（亮 / 暗）") + " · " + tr("亮色"))
+        # 语言按钮：地球图标 + 目标语言文本
+        self.btn_lang.setIcon(self._svg_icon(self._ICON_GLOBE, icon_color))
         self.btn_lang.setText("EN" if get_language() == "zh" else "中文")
+        self.btn_lang.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.btn_lang.setToolTip(tr("切换界面语言（中文 / English）"))
 
     def _toggle_theme(self):
         new_mode = "light" if get_mode() == "dark" else "dark"
         set_mode(new_mode)
-        from core.config import save_setting
-        save_setting("theme", new_mode)
         from PyQt6.QtWidgets import QApplication
+        from PyQt6.QtCore import QTimer
+        # 轻量切换：仅更新调色板 + 角色 QSS（规则少），避免完整 QSS 全树 polish
         apply_theme(QApplication.instance())
         self._refresh_top_buttons()
+        self._refresh_win_buttons()
         self._refresh_gmx_status()
+        QTimer.singleShot(0, lambda: _save_theme_setting(new_mode))
 
     def _toggle_language(self):
         new_lang = "en" if get_language() == "zh" else "zh"
@@ -327,17 +366,67 @@ class MainWindow(QMainWindow):
         self.status_env_dot.style().polish(self.status_env_dot)
 
     # ── 导航 ──────────────────────────────────────────────────────────────
+    def _ensure_module_built(self, index: int) -> tuple:
+        """确保模块页面已构建，返回其页签范围 (start, end)"""
+        if index in self._pipeline_ranges:
+            return self._pipeline_ranges[index]
+        start = self.solution_tabs.count()
+        if index == 1:
+            self.ligand_simulator.ensure_built(self.solution_tabs)
+        elif index == 2:
+            self.umbrella_simulator.ensure_built(self.solution_tabs)
+        rng = (start, self.solution_tabs.count() - 1)
+        self._pipeline_ranges[index] = rng
+        return rng
+
+    def _apply_module_tabs(self, index: int):
+        """只显示当前模块的页签，隐藏其他模块页签（避免页签栏平铺重复）"""
+        if index not in self._pipeline_ranges:
+            return
+        rng = self._pipeline_ranges[index]
+        total = self.solution_tabs.count()
+        tabbar = self.solution_tabs.tabBar()
+        # 1. 确保当前 index 在当前模块内（避免指向即将隐藏的页签）
+        cur = self.solution_tabs.currentIndex()
+        if cur < rng[0] or cur > rng[1]:
+            self.solution_tabs.setCurrentIndex(rng[0])
+        # 2. 只显示当前模块页签（无中间全显示态，避免滚动按钮闪现/黑折线）
+        for i in range(total):
+            visible = rng[0] <= i <= rng[1]
+            if tabbar.isTabVisible(i) != visible:
+                tabbar.setTabVisible(i, visible)
+
     def _on_nav_changed(self, index: int):
-        self.stacked_widget.setCurrentIndex(index)
+        # stacked_widget：0/1/2 共用共享页签栏，3 为 WIP 占位
+        self.stacked_widget.setCurrentIndex(self._nav_stack_map.get(index, 0))
+        if index <= 2:
+            # 懒加载：首次切换时构建模块页面，再只显示该模块页签
+            # 构建期间禁用重绘，避免大量控件瞬时创建导致窗口闪烁
+            self.setUpdatesEnabled(False)
+            try:
+                self._ensure_module_built(index)
+                self._apply_module_tabs(index)
+            finally:
+                self.setUpdatesEnabled(True)
         self._update_status_cwd()
+
+    def _set_pipeline_tab(self, module_idx: int, step_idx: int):
+        """将指定模块切到指定步骤页签（供 Pipeline 信号链使用）"""
+        rng = self._ensure_module_built(module_idx)
+        self._apply_module_tabs(module_idx)
+        idx = min(rng[0] + step_idx, rng[1])
+        self.solution_tabs.setCurrentIndex(idx)
+        self.sidebar.set_current(module_idx)
 
     def _update_status_cwd(self):
         try:
-            idx = self.stacked_widget.currentIndex()
+            # 当前模块由侧边导航决定（stacked_widget 0/1/2 共用共享页签栏）
+            checked = [i for i, it in enumerate(self.sidebar.items()) if it.isChecked()]
+            mod = checked[0] if checked else 0
             cwd = None
-            if idx == 0:
-                cwd = self.solution_tabs.widget(0).cwd
-            elif idx == 1:
+            if mod == 0:
+                cwd = self.solution_tabs.widget(self._pipeline_ranges[0][0]).cwd
+            elif mod == 1:
                 cwd = self.ligand_simulator.prep_tab.cwd
             if cwd:
                 self.statusBar().showMessage(trf("工作目录: {cwd}", cwd=cwd))
@@ -416,23 +505,23 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(widget)
 
     def init_topology_tab(self):
-        tab = TopologyTab(self)
+        tab = TopologyTab(self, self.solution_tabs)
         self.solution_tabs.addTab(tab, tr("1. 拓扑与水箱"))
 
     def init_em_tab(self):
-        tab = EMTab(self)
+        tab = EMTab(self, self.solution_tabs)
         self.solution_tabs.addTab(tab, tr("2. 能量最小化"))
 
     def init_eq_tab(self):
-        tab = EQTab(self)
+        tab = EQTab(self, self.solution_tabs)
         self.solution_tabs.addTab(tab, tr("3. 系统平衡"))
 
     def init_md_tab(self):
-        tab = MDTab(self)
+        tab = MDTab(self, self.solution_tabs)
         self.solution_tabs.addTab(tab, tr("4. 生产模拟"))
 
     def init_analysis_tab(self):
-        tab = AnalysisTab(self)
+        tab = AnalysisTab(self, self.solution_tabs)
         self.solution_tabs.addTab(tab, tr("5. 分析与可视化"))
 
     # ── GROMACS 配置 ──────────────────────────────────────────────────────
@@ -481,3 +570,12 @@ class MainWindow(QMainWindow):
             self.log(tr("[系统] 警告：未配置 GROMACS 路径，部分功能不可用。\n       可稍后点击「测试 GROMACS 环境」按钮重新配置。"))
         self._refresh_gmx_status()
         self._update_status_cwd()
+
+
+def _save_theme_setting(mode: str):
+    """延迟保存主题设置，避免阻塞切换"""
+    try:
+        from core.config import save_setting
+        save_setting("theme", mode)
+    except Exception:
+        pass

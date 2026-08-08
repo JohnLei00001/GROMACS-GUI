@@ -47,8 +47,8 @@ def strip_pdb_nonprotein(pdb_path):
     return removed
 
 class TopologyTab(QWidget):
-    def __init__(self, main_window):
-        super().__init__()
+    def __init__(self, main_window, parent=None):
+        super().__init__(parent)
         self.main_window = main_window # Reference to main window for logging and running
         self.runner = main_window.runner
         self.cwd = ""  # 由用户选择输入文件或手动指定工作目录

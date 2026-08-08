@@ -149,7 +149,7 @@ class _CollapsibleSection(QWidget):
         self._btn.clicked.connect(self._toggle)
         lay.addWidget(self._btn)
 
-        self._content = QWidget()
+        self._content = QWidget(self)
         self._content.setVisible(expanded)
         lay.addWidget(self._content)
 
@@ -188,7 +188,7 @@ class MDPPanel(QWidget):
         root = QVBoxLayout(self); root.setContentsMargins(0, 0, 0, 0)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
-        form_w = QWidget(); self.form = QVBoxLayout(form_w)
+        form_w = QWidget(self); self.form = QVBoxLayout(form_w)
         self.form.setContentsMargins(0, 0, 0, 0)
         self.form.setSpacing(0)
 
@@ -215,7 +215,7 @@ class MDPPanel(QWidget):
         if not keys: return
 
         title = tr(_SECTION_TITLES.get(sec_name, sec_name))
-        sec = _CollapsibleSection(title, expanded=sec_name in _EXPANDED_DEFAULT)
+        sec = _CollapsibleSection(title, expanded=sec_name in _EXPANDED_DEFAULT, parent=self)
         fl = sec.layout()
         for key in keys:
             wt = _WIDGET_TYPE.get(key, ("line", []))

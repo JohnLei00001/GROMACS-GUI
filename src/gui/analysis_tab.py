@@ -20,8 +20,8 @@ except ImportError:
     HAS_MATPLOTLIB = False
 
 class AnalysisTab(QWidget):
-    def __init__(self, main_window):
-        super().__init__()
+    def __init__(self, main_window, parent=None):
+        super().__init__(parent)
         self.main_window = main_window
         self.runner = main_window.runner
         self._group_cache = {}  # cwd -> {name: number}

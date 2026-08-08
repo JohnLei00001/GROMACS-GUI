@@ -61,7 +61,7 @@ class StepCard(QFrame):
         v.addLayout(header)
 
         # ── 内容区 ──
-        self.content = QWidget()
+        self.content = QWidget(self)
         if layout_kind == "form":
             self.content_layout = QFormLayout(self.content)
             self.content_layout.setContentsMargins(40, 0, 0, 0)
