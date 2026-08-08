@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QGroupBox, 
                              QFormLayout, QLineEdit, 
-                             QMessageBox, QFileDialog)
+                             QMessageBox, QFileDialog, QScrollArea, QFrame)
 from PyQt6.QtCore import pyqtSignal
 import os
 import shutil
@@ -19,7 +19,11 @@ class LigandPrepTab(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
+        # 滚动容器：内容超高时允许滚动，避免窗口拉矮后被裁切
+        root = QVBoxLayout(self)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        w = QWidget(); layout = QVBoxLayout(w)
         
         # === 1. 工作目录 ===
         dir_group = QGroupBox("1. 设置工作目录")
@@ -77,6 +81,7 @@ class LigandPrepTab(QWidget):
         layout.addWidget(res_group)
 
         layout.addStretch()
+        scroll.setWidget(w); root.addWidget(scroll)
 
     def create_browse_row(self, line_edit, button):
         w = QWidget()

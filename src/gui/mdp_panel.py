@@ -145,7 +145,7 @@ class _CollapsibleSection(QWidget):
         self._btn.setAutoRaise(True)
         self._btn.setStyleSheet(
             "QToolButton { border: none; background: transparent;"
-            " font-weight: bold; color: #b9b9b9; padding: 6px 2px; text-align: left; }"
+            " font-weight: bold; color: #b9b9b9; padding: 2px 2px; text-align: left; }"
             "QToolButton:hover { color: #ffffff; }")
         self._btn.clicked.connect(self._toggle)
         lay.addWidget(self._btn)
@@ -161,9 +161,9 @@ class _CollapsibleSection(QWidget):
         """返回内容区的表单布局（惰性创建）"""
         if self._content.layout() is None:
             fl = QFormLayout(self._content)
-            fl.setContentsMargins(10, 2, 0, 4)
-            fl.setVerticalSpacing(6)
-            fl.setHorizontalSpacing(16)
+            fl.setContentsMargins(8, 0, 0, 2)
+            fl.setVerticalSpacing(3)
+            fl.setHorizontalSpacing(12)
             fl.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
             self._content.setLayout(fl)
         return self._content.layout()

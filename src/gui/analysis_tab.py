@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QGroupBox, 
                              QFormLayout, QComboBox, QLineEdit, 
-                             QMessageBox, QFileDialog)
+                             QMessageBox, QFileDialog, QScrollArea, QFrame)
 from PyQt6.QtCore import Qt
 import os
 import sys
@@ -26,7 +26,11 @@ class AnalysisTab(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
+        # 滚动容器：内容超高时允许滚动，避免窗口拉矮后被裁切
+        root = QVBoxLayout(self)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        w = QWidget(); layout = QVBoxLayout(w)
         
         # === 1. 轨迹处理 (trjconv) ===
         trj_group = QGroupBox("1. 轨迹处理 (去除周期性边界条件)")
@@ -114,6 +118,8 @@ class AnalysisTab(QWidget):
             warn_label = QLabel("提示: 未检测到 matplotlib，绘图功能不可用。请运行 pip install matplotlib")
             warn_label.setStyleSheet("color: #f48771;")
             layout.addWidget(warn_label)
+
+        scroll.setWidget(w); root.addWidget(scroll)
 
     def get_cwd(self):
         try:

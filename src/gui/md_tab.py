@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QGroupBox, 
                              QFormLayout, QComboBox, QLineEdit, 
-                             QMessageBox)
+                             QMessageBox, QScrollArea, QFrame)
 import os
 from gui.mdp_panel import MDPPanel
 
@@ -13,7 +13,11 @@ class MDTab(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
+        # 滚动容器：内容超高时允许滚动，避免窗口拉矮后被裁切
+        root = QVBoxLayout(self)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        w = QWidget(); layout = QVBoxLayout(w)
 
         # 1. MDP
         mdp_group = QGroupBox("1. 准备生产模拟参数 (md.mdp)")
@@ -43,6 +47,8 @@ class MDTab(QWidget):
         run_l.addRow("执行计算:", btn_mdrun)
         run_group.setLayout(run_l)
         layout.addWidget(run_group)
+
+        scroll.setWidget(w); root.addWidget(scroll)
 
     def _cwd(self):
         try:

@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QGroupBox, 
                              QFormLayout, QComboBox, QLineEdit, 
-                             QMessageBox, QFileDialog, QCheckBox)
+                             QMessageBox, QFileDialog, QCheckBox,
+                             QScrollArea, QFrame)
 from PyQt6.QtCore import pyqtSignal
 from gui.topology_tab import discover_forcefields, strip_pdb_nonprotein
 import os
@@ -20,7 +21,11 @@ class ComplexTab(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
+        # 滚动容器：内容超高时允许滚动，避免窗口拉矮后被裁切
+        root = QVBoxLayout(self)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        w = QWidget(); layout = QVBoxLayout(w)
 
         # 0. 状态信息
         self.status_label = QLabel("等待配体导入... (请先完成「1. 配体准备」标签页)")
@@ -126,6 +131,7 @@ class ComplexTab(QWidget):
         layout.addWidget(genion_group)
 
         layout.addStretch()
+        scroll.setWidget(w); root.addWidget(scroll)
 
     # ------------------------------------------------------------------
     # 信号接收

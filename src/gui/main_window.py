@@ -131,11 +131,16 @@ class MainWindow(QMainWindow):
         log_layout.addWidget(self.btn_test)
         
         self.splitter.addWidget(self.log_widget)
-        
-        # 设置初始比例（上 75% : 下 25%）
-        self.splitter.setStretchFactor(0, 3)
+
+        # 防止用户拖动分割条时把日志面板彻底拖没（拖没后无法恢复）
+        self.splitter.setCollapsible(1, False)
+
+        # 设置初始比例（内容区占大部分，日志区默认较矮可折叠）
+        self.splitter.setStretchFactor(0, 4)
         self.splitter.setStretchFactor(1, 1)
+        self.splitter.setSizes([600, 130])
         self._log_visible = True
+        self._log_last_height = 130
 
         # 状态栏：环境状态 + 当前工作目录
         self._setup_statusbar()
@@ -199,10 +204,31 @@ class MainWindow(QMainWindow):
 
     # ── 日志折叠 ────────────────────────────────────────────────────────────
     def toggle_log(self):
-        """展开 / 收起底部日志面板"""
-        self._log_visible = not self._log_visible
-        self.log_widget.setVisible(self._log_visible)
-        self.btn_toggle_log.setText("▼ 收起" if self._log_visible else "▲ 展开")
+        """展开 / 收起底部日志面板。
+
+        收起时仅压缩高度并保留标题行（展开按钮始终可见），
+        避免整个面板隐藏后失去恢复入口。
+        """
+        sizes = self.splitter.sizes()
+        if self._log_visible:
+            # 记录当前日志高度，随后收起
+            if len(sizes) > 1:
+                self._log_last_height = sizes[1]
+            self._log_visible = False
+            self.log_output.setVisible(False)
+            self.btn_test.setVisible(False)
+            self.btn_toggle_log.setText("▲ 展开日志")
+            total = sum(sizes)
+            self.splitter.setSizes([max(200, total - 28), 28])
+        else:
+            # 恢复日志面板
+            self._log_visible = True
+            self.log_output.setVisible(True)
+            self.btn_test.setVisible(True)
+            self.btn_toggle_log.setText("▼ 收起日志")
+            total = sum(sizes)
+            h = max(self._log_last_height, 80)
+            self.splitter.setSizes([max(200, total - h), h])
 
     def log(self, message):
         """向日志窗口输出信息"""

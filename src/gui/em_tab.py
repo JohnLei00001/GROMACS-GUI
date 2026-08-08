@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
-                             QPushButton, QLabel, QFileDialog, 
-                             QGroupBox, QFormLayout, QComboBox, 
-                             QLineEdit, QMessageBox)
+                             QPushButton, QLabel, QGroupBox, QFileDialog,
+                             QFormLayout, QComboBox, QLineEdit, 
+                             QMessageBox, QScrollArea, QFrame)
 import os
 from gui.mdp_panel import MDPPanel
 
@@ -13,7 +13,11 @@ class EMTab(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
+        # 滚动容器：内容超高时允许滚动，避免窗口拉矮后被裁切
+        root = QVBoxLayout(self)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        w = QWidget(); layout = QVBoxLayout(w)
 
         # 1. MDP 参数面板
         mdp_group = QGroupBox("1. 准备能量最小化参数 (minim.mdp)")
@@ -51,6 +55,7 @@ class EMTab(QWidget):
         layout.addWidget(mdrun_group)
 
         layout.addStretch()
+        scroll.setWidget(w); root.addWidget(scroll)
 
     def get_cwd(self):
         try:

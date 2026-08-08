@@ -87,8 +87,8 @@ QListWidget#navList {{
     outline: none;
 }}
 QListWidget#navList::item {{
-    padding: 11px 14px;
-    margin: 2px 8px;
+    padding: 8px 12px;
+    margin: 1px 6px;
     border-radius: 6px;
     border-left: 3px solid transparent;
 }}
@@ -106,8 +106,8 @@ QGroupBox {{
     background-color: {C["bg_panel"]};
     border: 1px solid {C["border"]};
     border-radius: 8px;
-    margin-top: 16px;
-    padding: 8px 10px 10px 10px;
+    margin-top: 10px;
+    padding: 5px 8px 7px 8px;
     font-weight: 600;
     color: {C["text_main"]};
 }}
@@ -129,10 +129,10 @@ QTabWidget::pane {{
 QTabBar::tab {{
     background: transparent;
     color: {C["text_sub"]};
-    padding: 8px 16px;
+    padding: 5px 12px;
     border: none;
     border-bottom: 2px solid transparent;
-    margin-right: 4px;
+    margin-right: 2px;
     font-size: {UI_FONT_SIZE}px;
 }}
 QTabBar::tab:hover {{
@@ -149,7 +149,7 @@ QPushButton {{
     color: {C["text_main"]};
     border: 1px solid {C["border_light"]};
     border-radius: 6px;
-    padding: 6px 14px;
+    padding: 4px 12px;
     font-size: {UI_FONT_SIZE}px;
 }}
 QPushButton:hover {{
@@ -171,11 +171,11 @@ QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {{
     background-color: {C["bg_input"]};
     border: 1px solid {C["border"]};
     border-radius: 6px;
-    padding: 4px 8px;
+    padding: 3px 6px;
     color: {C["text_main"]};
     selection-background-color: {C["accent"]};
     selection-color: {C["text_bright"]};
-    min-height: 20px;
+    min-height: 16px;
 }}
 QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {{
     border-color: {C["accent"]};
@@ -209,8 +209,8 @@ QCheckBox, QRadioButton {{
     color: {C["text_main"]};
 }}
 QCheckBox::indicator, QRadioButton::indicator {{
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
     border: 1px solid {C["border_light"]};
     border-radius: 4px;
     background-color: {C["bg_input"]};
@@ -257,7 +257,7 @@ QProgressBar::chunk {{
 /* ═══ 滚动条（现代细条） ═══ */
 QScrollBar:vertical {{
     background: transparent;
-    width: 10px;
+    width: 8px;
     margin: 0;
 }}
 QScrollBar::handle:vertical {{
@@ -271,7 +271,7 @@ QScrollBar::handle:vertical:hover {{
 }}
 QScrollBar:horizontal {{
     background: transparent;
-    height: 10px;
+    height: 8px;
     margin: 0;
 }}
 QScrollBar::handle:horizontal {{
@@ -321,7 +321,7 @@ QMenu {{
     padding: 4px;
 }}
 QMenu::item {{
-    padding: 6px 24px 6px 12px;
+    padding: 4px 20px 4px 10px;
     border-radius: 4px;
 }}
 QMenu::item:selected {{
@@ -345,7 +345,7 @@ QListWidget, QListView, QTreeWidget {{
     outline: none;
 }}
 QListWidget::item {{
-    padding: 6px 8px;
+    padding: 4px 6px;
     border-radius: 4px;
 }}
 QListWidget::item:selected {{

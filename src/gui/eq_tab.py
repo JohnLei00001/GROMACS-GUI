@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                              QPushButton, QLabel, QGroupBox, 
                              QFormLayout, QComboBox, QLineEdit, 
-                             QTextEdit, QMessageBox, QTabWidget, QDialog)
+                             QTextEdit, QMessageBox, QTabWidget, QDialog,
+                             QScrollArea, QFrame)
 import os
 from gui.mdp_panel import MDPPanel
 
@@ -29,7 +30,11 @@ class EQTab(QWidget):
         self.eq_tabs.addTab(self.npt_tab, "NPT 平衡 (恒压)")
 
     def _init_nvt(self):
-        layout = QVBoxLayout(self.nvt_tab)
+        # 滚动容器：内容超高时允许滚动，避免窗口拉矮后被裁切
+        root = QVBoxLayout(self.nvt_tab)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        w = QWidget(); layout = QVBoxLayout(w)
 
         # 1. MDP
         mdp_group = QGroupBox("1. 准备 NVT 参数 (nvt.mdp)")
@@ -59,9 +64,14 @@ class EQTab(QWidget):
         run_l.addRow("执行计算:", btn_mdrun)
         run_group.setLayout(run_l)
         layout.addWidget(run_group)
+        scroll.setWidget(w); root.addWidget(scroll)
 
     def _init_npt(self):
-        layout = QVBoxLayout(self.npt_tab)
+        # 滚动容器：内容超高时允许滚动，避免窗口拉矮后被裁切
+        root = QVBoxLayout(self.npt_tab)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        w = QWidget(); layout = QVBoxLayout(w)
 
         mdp_group = QGroupBox("1. 准备 NPT 参数 (npt.mdp)")
         mdp_l = QVBoxLayout()
@@ -89,6 +99,7 @@ class EQTab(QWidget):
         run_l.addRow("执行计算:", btn_mdrun)
         run_group.setLayout(run_l)
         layout.addWidget(run_group)
+        scroll.setWidget(w); root.addWidget(scroll)
 
     # ─── helpers ────────────────────────────────────────────────────────
     def _cwd(self):
